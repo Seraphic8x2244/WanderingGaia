@@ -6,6 +6,9 @@
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `0b793578eccb613a45fdf3350ab40e16efdf43e6` - Add local directional bell preview.
+- `b8c3f870cda6297eb70f904f65fffaabb651a196` - Add target preview locale strings.
+- `b16f92218b73f4f71fa7677dc9722297ccf6f0b3` - Plan local directional bell preview.
 - `00f5f001bee5b205496958a81cb26f12de1f9725` - Add 256x64 four-frame bell swing source artwork.
 - `4167d3afc2666ace134a100920505b30de6a5e12` - Document WanderingGaia initial development scope.
 - `1922a93a8787c5649f00938483e5e6cbbd860324` - Add artwork directory scaffold.
@@ -22,7 +25,7 @@
 - Development contract copied from VanillaTemplate without project-specific changes.
 - Initial feature scope agreed and recorded below.
 - Four-frame bell swing artwork approved by the user and committed as `artwork/WanderingGaia_BellSwing_256x64.png`.
-- No in-game behaviour has been implemented or user-tested yet.
+- No runtime behaviour has been user-tested yet.
 
 ## Implemented / Awaiting Test
 - Development scaffold:
@@ -36,12 +39,20 @@
   - 256x64 sheet;
   - four 64x64 frames;
   - progression is centre -> slight left -> further left -> full left;
-  - intended to mirror in-game for the opposite swing direction.
+  - mirrored in-game for the opposite swing direction.
+- Local target-preview harness:
+  - `/wgtest`, `/wgtest on`, `/wgtest off`;
+  - uses ClassicAPI `GetPlayerFacing()` and the ClassicAPI four-return `UnitPosition()` shape;
+  - treats the local player as the recipient and current target as the remote player;
+  - calculates continuous 2D relative bearing and distance;
+  - applies the agreed left/right 20% and bottom 30% safe-area exclusions;
+  - uses the agreed non-linear distance curve and near-distance deadzone;
+  - animates the four-frame bell by mirroring the left-swing frames for the opposite half-cycle.
 
 ## Current Issues
 - Character names/identifiers for the two intended users have not yet been added to implementation.
-- Before involving the recipient, directional placement needs a local target-preview test path.
-- The committed bell PNG is source artwork; a WoW 1.12.1 runtime texture format such as 32-bit TGA still needs to be produced before the addon can load it in game.
+- The local target-preview path is implemented but untested in game.
+- The committed bell PNG is source artwork; the 256x64 32-bit uncompressed TGA runtime texture has been prepared locally but still needs to be committed to `artwork/` before the preview can render in WoW 1.12.1.
 
 ## Testing
 
@@ -52,12 +63,15 @@
 - Not tested: All runtime behaviour.
 
 ### Next Test
-- First runtime smoke test after the initial bell slice is implemented:
+- Local target-preview smoke test after the TGA is committed:
   - addon loads on WoW 1.12.1 without Lua errors;
-  - bell control appears only when the intended partner character is targeted;
-  - clicking the bell sends one ring event;
-  - recipient client receives and displays the bell effect;
-  - native fallback remains usable when directional extension data is unavailable.
+  - with ClassicAPI loaded, `/wgtest` enables the preview;
+  - no target hides the bell;
+  - selecting a visible target places the bell in the correct relative direction;
+  - turning in place moves the bell around the safe playfield appropriately;
+  - moving toward/away from the target changes radius according to the distance curve;
+  - the four-frame swing animates and mirrors correctly;
+  - `/wgtest off` hides the preview.
 
 ## Planned / To-do
 
@@ -115,4 +129,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Build a local target-preview test harness first so the directional system can be validated without involving the recipient: convert the approved sprite to a WoW 1.12.1-compatible 32-bit TGA, add a `/wgtest` toggle, and while enabled place/animate the bell on the local screen from the player's facing to the current target using ClassicAPI `GetPlayerFacing()` + `UnitPosition()`, including the safe-area and distance curve. After that is user-tested, wire the same placement code to real ring communication.
+Commit the prepared 256x64 32-bit uncompressed TGA runtime texture to `artwork/`, then user-test the existing `/wgtest` local target-preview harness in WoW 1.12.1 with ClassicAPI. Do not wire real ring communication until the local direction, distance, safe-area placement and animation are confirmed in game.
