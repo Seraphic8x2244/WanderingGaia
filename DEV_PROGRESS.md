@@ -2,11 +2,14 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.2-dev`
-- Implementation head ready for in-game test: `fb11dc26a599fa8cb2e075bcec22b43ee19673e3`
+- Version: `0.1.3-dev`
+- Implementation head ready for in-game test: `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6` - Bump WanderingGaia to 0.1.3-dev after adding the configurable visual origin.
+- `37790c48e979fef46f9b818da75342a000addad5` - Add configurable X/Y bell origin offsets while keeping outer deadzones fixed to the screen.
+- `cf655202ba784b97c48baf8dd076bf4e1e6348cc` - Add visual-origin configuration and diagnostic strings.
 - `fb11dc26a599fa8cb2e075bcec22b43ee19673e3` - Bump WanderingGaia to 0.1.2-dev and persist tuning settings with `WanderingGaiaDB`.
 - `aad7fb62480eee8abaac772e8163f3a98450a191` - Add bell tuning controls, safe-area overlays, range sizing, optional smoothing/Z range, and coordinate diagnostics.
 - `d5b041e99871a5e6ca2f9a13393e70bad81ba4b6` - Add tuning/configuration locale strings.
@@ -19,10 +22,17 @@
 - Four-frame bell artwork is committed as PNG source plus 256x64 32-bit uncompressed TGA runtime texture.
 - `0.1.1-dev` runtime result: user reports the direct-`UIParent CENTER` bell origin and DLL-provided direction behaviour work about as well as could reasonably be expected.
 - Directional movement/bearing is user-verified as working well while rotating around a target.
+- `0.1.2-dev` runtime result: user reports the config controls are good overall; the remaining usability gap was the inability to move the visual origin downward to match the apparent player position.
 - Bell swing animation timing remains `0.07` seconds per sprite step and was deliberately not made configurable.
 
 ## Implemented / Awaiting Test
-- `0.1.2-dev` tuning workflow:
+- `0.1.3-dev` adds configurable visual-origin offsets on top of the `0.1.2-dev` tuning workflow:
+  - `Origin X (%)` shifts the bell/ray origin horizontally relative to true UI centre;
+  - `Origin Y (%)` shifts it vertically; negative values move the origin down toward the player;
+  - edge deadzones remain fixed to the physical screen while ray-to-edge distance is recalculated from the shifted origin;
+  - the grey centre marker follows the shifted origin;
+  - the final WGCFG export and `/wg coords` diagnostics include the origin values.
+- Existing tuning workflow:
   - `/wg test [on|off]` replaces the old standalone `/wgtest` command.
   - `/wg config` opens a draggable tuning panel without implicitly enabling the preview.
   - opening config shows translucent grey left/right/up/down exclusion overlays plus a centred near-range marker.
@@ -39,7 +49,7 @@
 - Existing direction calculation, direct UI-centre anchoring and animation interval are preserved.
 
 ## Current Issues
-- The entire `0.1.2-dev` config/diagnostic slice is statically checked but not yet user-tested in game.
+- The `0.1.2-dev` config panel has been user-tested positively overall, but its origin was fixed to true screen centre; `0.1.3-dev` adds the requested movable origin and is awaiting focused in-game confirmation.
 - Z can be used honestly for 3D range, but not for vertical screen-direction projection with the currently documented ClassicAPI Lua data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
 - Real ring communication remains intentionally untouched until the local bell tuning baseline is settled.
@@ -47,23 +57,18 @@
 ## Testing
 
 ### Last Test
-- Version/state: `0.1.1-dev`, after the direct `UIParent CENTER` anchor correction.
-- Passed: user reports centre/directional behaviour works about as well as expected from the DLL position data.
-- Passed: directional movement remains convincing in practical target/rotation testing.
-- Superseded issue: the earlier 0.1.0 off-centre orbit is fixed.
+- Version/state: `0.1.2-dev`.
+- Passed: user reports the tuning controls are good overall in game.
+- Issue found: the bell/ray origin needs to be movable downward to visually match the player's on-screen position.
+- Existing directional behaviour remains acceptable.
 
 ### Next Test
-- Update through TocPilot to `0.1.2-dev` / implementation head `fb11dc26a599fa8cb2e075bcec22b43ee19673e3`.
-- Confirm `/wg test on` still gives the same direction/centre feel as the verified 0.1.1 baseline.
-- Run `/wg config`:
-  - confirm the panel opens and the grey left/right/up/down overlays match the configured percentages;
-  - Apply an obvious edge-deadzone change and verify the overlay and bell travel limit move together;
-  - alter one curve point and verify the bell radius changes accordingly, then restore/tune it;
-  - try different near/far sizes and confirm bell size changes with range;
-  - leave smoothing at 0 first, then optionally try a moderate value to judge whether it improves DLL jitter without making movement laggy;
-  - toggle Use Z for range somewhere with a meaningful height difference and compare the radial-distance feel; screen direction should remain based on horizontal bearing.
-- Run `/wg coords` and verify the live values look plausible while moving/turning and targeting.
-- Use Copy settings and paste the resulting `WGCFG` line back into chat so the tuned values can become the default install settings.
+- Update through TocPilot to `0.1.3-dev` / implementation head `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`.
+- Open `/wg config` and set a negative `Origin Y (%)` until the grey centre marker visually matches the player.
+- Confirm the bell now orbits/radiates around that shifted point while left/right/up/down edge deadzones remain fixed to the screen.
+- Confirm `Origin X (%)` also shifts the origin predictably, then return it to 0 unless horizontal adjustment is useful.
+- Confirm the existing distance curve, bell sizing, Z-range option and smoothing still behave as before.
+- Use Copy settings and paste the resulting `WGCFG` line back into chat once the origin and other tuning values feel right.
 
 ## Planned / To-do
 
@@ -122,4 +127,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Update through TocPilot to `0.1.2-dev` / `fb11dc26a599fa8cb2e075bcec22b43ee19673e3`. First confirm `/wg test on` preserves the verified 0.1.1 direction/centre behaviour. Then open `/wg config`, visually verify the grey deadzone overlays, tune edge exclusions / distance curve / near-far size / optional smoothing / optional Z range, check `/wg coords`, and paste the Copy settings `WGCFG` line back into chat. Use that runtime result to set the good baseline defaults before implementing real ring communication.
+Update through TocPilot to `0.1.3-dev` / `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`. In `/wg config`, tune `Origin Y (%)` negative until the grey centre marker matches the player's visual position, verify the bell's directional orbit now uses that point while the outer deadzones remain fixed, then paste the Copy settings `WGCFG` line back into chat so the tuned values can become the install defaults.
