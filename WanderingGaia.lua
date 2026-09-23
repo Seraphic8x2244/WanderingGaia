@@ -17,7 +17,8 @@ local DEFAULT_SETTINGS = {
     innerRadiusX = 6,
     innerRadiusY = 10,
     outerRadiusX = 30,
-    outerRadiusY = 40,
+    outerRadiusUp = 40,
+    outerRadiusDown = 40,
     curveDistance2 = 10,
     curveRadius2 = 20,
     curveDistance3 = 40,
@@ -147,14 +148,19 @@ local function NormalizeSettings(target)
     target.innerRadiusX = Clamp(tonumber(target.innerRadiusX) or DEFAULT_SETTINGS.innerRadiusX, 1, 45)
     target.innerRadiusY = Clamp(tonumber(target.innerRadiusY) or DEFAULT_SETTINGS.innerRadiusY, 1, 45)
     target.outerRadiusX = Clamp(tonumber(target.outerRadiusX) or DEFAULT_SETTINGS.outerRadiusX, 2, 50)
-    target.outerRadiusY = Clamp(tonumber(target.outerRadiusY) or DEFAULT_SETTINGS.outerRadiusY, 2, 50)
+    target.outerRadiusUp = Clamp(tonumber(target.outerRadiusUp) or DEFAULT_SETTINGS.outerRadiusUp, 2, 50)
+    target.outerRadiusDown = Clamp(tonumber(target.outerRadiusDown) or DEFAULT_SETTINGS.outerRadiusDown, 2, 50)
 
     if target.outerRadiusX <= target.innerRadiusX then
         target.outerRadiusX = math.min(50, target.innerRadiusX + 1)
     end
 
-    if target.outerRadiusY <= target.innerRadiusY then
-        target.outerRadiusY = math.min(50, target.innerRadiusY + 1)
+    if target.outerRadiusUp <= target.innerRadiusY then
+        target.outerRadiusUp = math.min(50, target.innerRadiusY + 1)
+    end
+
+    if target.outerRadiusDown <= target.innerRadiusY then
+        target.outerRadiusDown = math.min(50, target.innerRadiusY + 1)
     end
 
     target.curveDistance2 = Clamp(tonumber(target.curveDistance2) or DEFAULT_SETTINGS.curveDistance2, 0.1, 300)
@@ -199,6 +205,15 @@ local function InitializeSettings()
         WanderingGaiaDB.minimumRange = WanderingGaiaDB.centerDeadzone
     end
 
+    -- Preserve the existing symmetric outer Y tuning when moving to separate
+    -- upper/lower radii.
+    if WanderingGaiaDB.outerRadiusUp == nil and WanderingGaiaDB.outerRadiusY ~= nil then
+        WanderingGaiaDB.outerRadiusUp = WanderingGaiaDB.outerRadiusY
+    end
+    if WanderingGaiaDB.outerRadiusDown == nil and WanderingGaiaDB.outerRadiusY ~= nil then
+        WanderingGaiaDB.outerRadiusDown = WanderingGaiaDB.outerRadiusY
+    end
+
     FillMissingDefaults(WanderingGaiaDB)
     NormalizeSettings(WanderingGaiaDB)
 
@@ -208,6 +223,7 @@ local function InitializeSettings()
     WanderingGaiaDB.deadzoneUp = nil
     WanderingGaiaDB.deadzoneDown = nil
     WanderingGaiaDB.useZ = nil
+    WanderingGaiaDB.outerRadiusY = nil
 
     settings = WanderingGaiaDB
 end
@@ -441,9 +457,10 @@ local function ComputePlacement(applySmoothing)
     local innerRadiusX = (width * (settings.innerRadiusX / 100)) + half
     local innerRadiusY = (height * (settings.innerRadiusY / 100)) + half
     local outerRadiusX = (width * (settings.outerRadiusX / 100)) - half
-    local outerRadiusY = (height * (settings.outerRadiusY / 100)) - half
+    local outerRadiusUp = (height * (settings.outerRadiusUp / 100)) - half
+    local outerRadiusDown = (height * (settings.outerRadiusDown / 100)) - half
 
-    if outerRadiusX <= 0 or outerRadiusY <= 0 then
+    if outerRadiusX <= 0 or outerRadiusUp <= 0 or outerRadiusDown <= 0 then
         geometry.valid = false
         return false
     end
@@ -454,6 +471,11 @@ local function ComputePlacement(applySmoothing)
         innerRadiusX,
         innerRadiusY
     )
+    local outerRadiusY = outerRadiusDown
+    if geometry.directionY >= 0 then
+        outerRadiusY = outerRadiusUp
+    end
+
     local outerDistance = RayEllipseDistance(
         geometry.directionX,
         geometry.directionY,
@@ -617,7 +639,8 @@ local function UpdateDeadzoneOverlays()
     local innerRadiusX = width * (settings.innerRadiusX / 100)
     local innerRadiusY = height * (settings.innerRadiusY / 100)
     local outerRadiusX = width * (settings.outerRadiusX / 100)
-    local outerRadiusY = height * (settings.outerRadiusY / 100)
+    local outerRadiusUp = height * (settings.outerRadiusUp / 100)
+    local outerRadiusDown = height * (settings.outerRadiusDown / 100)
 
     local sliceCount = table.getn(deadzoneOverlays.innerSlices)
     local i
@@ -645,12 +668,17 @@ local function UpdateDeadzoneOverlays()
         local texture = deadzoneOverlays.outerDots[i]
 
         texture:ClearAllPoints()
+        local verticalRadius = outerRadiusDown
+        if math.sin(angle) >= 0 then
+            verticalRadius = outerRadiusUp
+        end
+
         texture:SetPoint(
             "CENTER",
             deadzoneOverlays.frame,
             "CENTER",
             originX + (math.cos(angle) * outerRadiusX),
-            originY + (math.sin(angle) * outerRadiusY)
+            originY + (math.sin(angle) * verticalRadius)
         )
     end
 
@@ -673,12 +701,13 @@ local function UpdateDeadzoneOverlays()
         deadzoneOverlays.frame,
         "CENTER",
         originX,
-        originY + outerRadiusY + 8
+        originY + outerRadiusUp + 8
     )
     deadzoneOverlays.outerLabel:SetText(string.format(
         L.CONFIG_OVERLAY_OUTER,
         settings.outerRadiusX,
-        settings.outerRadiusY
+        settings.outerRadiusUp,
+        settings.outerRadiusDown
     ))
 
     deadzoneOverlays.originLabel:ClearAllPoints()
@@ -788,7 +817,8 @@ local function RefreshConfigFields()
     SetField(configFields.innerRadiusX, settings.innerRadiusX)
     SetField(configFields.innerRadiusY, settings.innerRadiusY)
     SetField(configFields.outerRadiusX, settings.outerRadiusX)
-    SetField(configFields.outerRadiusY, settings.outerRadiusY)
+    SetField(configFields.outerRadiusUp, settings.outerRadiusUp)
+    SetField(configFields.outerRadiusDown, settings.outerRadiusDown)
 
     SetField(configFields.minimumRange, settings.minimumRange)
     SetField(configFields.curveDistance2, settings.curveDistance2)
@@ -821,7 +851,7 @@ end
 
 local function SettingsExportString()
     return string.format(
-        "WGCFG version=%s minrange=%g origin=%g:%g inner=%g:%g outer=%g:%g curve=%g:0,%g:%g,%g:%g,%g:%g,%g:%g size=%g:%g smooth=%g",
+        "WGCFG version=%s minrange=%g origin=%g:%g inner=%g:%g outer=%g:%g:%g curve=%g:0,%g:%g,%g:%g,%g:%g,%g:%g size=%g:%g smooth=%g",
         ADDON_VERSION or "unknown",
         settings.minimumRange,
         settings.originX,
@@ -829,7 +859,8 @@ local function SettingsExportString()
         settings.innerRadiusX,
         settings.innerRadiusY,
         settings.outerRadiusX,
-        settings.outerRadiusY,
+        settings.outerRadiusUp,
+        settings.outerRadiusDown,
         settings.minimumRange,
         settings.curveDistance2,
         settings.curveRadius2,
@@ -902,8 +933,10 @@ local function CreateConfigFrame()
 
     CreateLabel(frame, L.CONFIG_OUTER_X, 28, -140)
     configFields.outerRadiusX = CreateNumericField(frame, "OuterRadiusX", 103, -134, 52)
-    CreateLabel(frame, L.CONFIG_OUTER_Y, 180, -140)
-    configFields.outerRadiusY = CreateNumericField(frame, "OuterRadiusY", 255, -134, 52)
+    CreateLabel(frame, L.CONFIG_OUTER_UP, 180, -140)
+    configFields.outerRadiusUp = CreateNumericField(frame, "OuterRadiusUp", 255, -134, 52)
+    CreateLabel(frame, L.CONFIG_OUTER_DOWN, 330, -140)
+    configFields.outerRadiusDown = CreateNumericField(frame, "OuterRadiusDown", 410, -134, 52)
 
     local originNote = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     originNote:SetPoint("TOPLEFT", frame, "TOPLEFT", 330, -74)
@@ -1043,7 +1076,8 @@ ApplyConfigFields = function()
     settings.innerRadiusX = ReadField(configFields.innerRadiusX, settings.innerRadiusX)
     settings.innerRadiusY = ReadField(configFields.innerRadiusY, settings.innerRadiusY)
     settings.outerRadiusX = ReadField(configFields.outerRadiusX, settings.outerRadiusX)
-    settings.outerRadiusY = ReadField(configFields.outerRadiusY, settings.outerRadiusY)
+    settings.outerRadiusUp = ReadField(configFields.outerRadiusUp, settings.outerRadiusUp)
+    settings.outerRadiusDown = ReadField(configFields.outerRadiusDown, settings.outerRadiusDown)
 
     settings.minimumRange = ReadField(configFields.minimumRange, settings.minimumRange)
     settings.curveDistance2 = ReadField(configFields.curveDistance2, settings.curveDistance2)
@@ -1192,7 +1226,8 @@ local function UpdateCoordsDisplay()
         settings.innerRadiusX,
         settings.innerRadiusY,
         settings.outerRadiusX,
-        settings.outerRadiusY
+        settings.outerRadiusUp,
+        settings.outerRadiusDown
     ))
 
     if geometry.curvePercent ~= nil and geometry.bellSize ~= nil and geometry.offsetX ~= nil and geometry.offsetY ~= nil then
