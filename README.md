@@ -1,1 +1,1 @@
-![WanderingGaia](artwork/wanderinggaia.png)
+![WanderingGaia](artwork/wanderinggaia2.png)
