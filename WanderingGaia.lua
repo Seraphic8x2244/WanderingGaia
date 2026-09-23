@@ -16,6 +16,8 @@ local DEFAULT_SETTINGS = {
     deadzoneRight = 20,
     deadzoneUp = 2,
     deadzoneDown = 30,
+    originX = 0,
+    originY = 0,
     curveDistance2 = 10,
     curveRadius2 = 20,
     curveDistance3 = 40,
@@ -145,6 +147,8 @@ local function NormalizeSettings(target)
     target.deadzoneRight = Clamp(tonumber(target.deadzoneRight) or DEFAULT_SETTINGS.deadzoneRight, 0, 45)
     target.deadzoneUp = Clamp(tonumber(target.deadzoneUp) or DEFAULT_SETTINGS.deadzoneUp, 0, 45)
     target.deadzoneDown = Clamp(tonumber(target.deadzoneDown) or DEFAULT_SETTINGS.deadzoneDown, 0, 45)
+    target.originX = Clamp(tonumber(target.originX) or DEFAULT_SETTINGS.originX, -40, 40)
+    target.originY = Clamp(tonumber(target.originY) or DEFAULT_SETTINGS.originY, -40, 40)
 
     target.curveDistance2 = Clamp(tonumber(target.curveDistance2) or DEFAULT_SETTINGS.curveDistance2, 0.1, 300)
     if target.curveDistance2 <= target.centerDeadzone then
@@ -390,11 +394,15 @@ local function ComputePlacement(applySmoothing)
     local percent = DistancePercent(geometry.distance)
     local bellSize = BellSizeForPercent(percent)
     local half = bellSize / 2
+    local originX = width * (settings.originX / 100)
+    local originY = height * (settings.originY / 100)
 
-    local leftOffset = ((width * (settings.deadzoneLeft / 100)) + half) - (width / 2)
-    local rightOffset = ((width * (1 - (settings.deadzoneRight / 100))) - half) - (width / 2)
-    local bottomOffset = ((height * (settings.deadzoneDown / 100)) + half) - (height / 2)
-    local topOffset = ((height * (1 - (settings.deadzoneUp / 100))) - half) - (height / 2)
+    -- Edge deadzones remain fixed to the screen. Ray distances are measured
+    -- from the configurable visual origin, which defaults to true UI centre.
+    local leftOffset = ((width * (settings.deadzoneLeft / 100)) + half) - (width / 2) - originX
+    local rightOffset = ((width * (1 - (settings.deadzoneRight / 100))) - half) - (width / 2) - originX
+    local bottomOffset = ((height * (settings.deadzoneDown / 100)) + half) - (height / 2) - originY
+    local topOffset = ((height * (1 - (settings.deadzoneUp / 100))) - half) - (height / 2) - originY
 
     if rightOffset <= leftOffset or topOffset <= bottomOffset then
         geometry.valid = false
@@ -418,9 +426,11 @@ local function ComputePlacement(applySmoothing)
 
     local edgeDistance = math.min(edgeX, edgeY)
     local radius = edgeDistance * percent
-    local rawX = geometry.directionX * radius
-    local rawY = geometry.directionY * radius
+    local rawX = originX + (geometry.directionX * radius)
+    local rawY = originY + (geometry.directionY * radius)
 
+    geometry.originX = originX
+    geometry.originY = originY
     geometry.curvePercent = percent
     geometry.bellSize = bellSize
     geometry.rawOffsetX = rawX
@@ -566,8 +576,10 @@ local function UpdateDeadzoneOverlays()
     down.label:SetText(string.format(L.CONFIG_OVERLAY_DOWN, settings.deadzoneDown))
 
     local center = deadzoneOverlays.center
+    local originX = width * (settings.originX / 100)
+    local originY = height * (settings.originY / 100)
     center:ClearAllPoints()
-    center:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    center:SetPoint("CENTER", UIParent, "CENTER", originX, originY)
     center:SetWidth(110)
     center:SetHeight(48)
     center.label:SetText(string.format(L.CONFIG_OVERLAY_CENTER, settings.centerDeadzone))
@@ -679,6 +691,8 @@ local function RefreshConfigFields()
     SetField(configFields.deadzoneRight, settings.deadzoneRight)
     SetField(configFields.deadzoneUp, settings.deadzoneUp)
     SetField(configFields.deadzoneDown, settings.deadzoneDown)
+    SetField(configFields.originX, settings.originX)
+    SetField(configFields.originY, settings.originY)
 
     SetField(configFields.centerDeadzone, settings.centerDeadzone)
     SetField(configFields.curveDistance2, settings.curveDistance2)
@@ -725,13 +739,15 @@ local function SettingsExportString()
     end
 
     return string.format(
-        "WGCFG version=%s center=%g left=%g right=%g up=%g down=%g curve=%g:0,%g:%g,%g:%g,%g:%g,%g:%g size=%g:%g smooth=%g z=%d",
+        "WGCFG version=%s center=%g left=%g right=%g up=%g down=%g origin=%g:%g curve=%g:0,%g:%g,%g:%g,%g:%g,%g:%g size=%g:%g smooth=%g z=%d",
         ADDON_VERSION or "unknown",
         settings.centerDeadzone,
         settings.deadzoneLeft,
         settings.deadzoneRight,
         settings.deadzoneUp,
         settings.deadzoneDown,
+        settings.originX,
+        settings.originY,
         settings.centerDeadzone,
         settings.curveDistance2,
         settings.curveRadius2,
@@ -756,7 +772,7 @@ local function CreateConfigFrame()
     local frame = CreateFrame("Frame", "WanderingGaiaConfigFrame", UIParent)
     configFrame = frame
     frame:SetWidth(650)
-    frame:SetHeight(540)
+    frame:SetHeight(570)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:SetFrameStrata("DIALOG")
     frame:EnableMouse(true)
@@ -801,36 +817,46 @@ local function CreateConfigFrame()
     CreateLabel(frame, L.CONFIG_DOWN, 380, -80)
     configFields.deadzoneDown = CreateNumericField(frame, "DeadzoneDown", 426, -74, 52)
 
-    CreateLabel(frame, L.CONFIG_DISTANCE_SECTION, 24, -122, "GameFontNormal")
-    CreateLabel(frame, L.CONFIG_POINT, 30, -150)
-    CreateLabel(frame, L.CONFIG_DISTANCE, 150, -150)
-    CreateLabel(frame, L.CONFIG_OUTER, 244, -150)
+    CreateLabel(frame, L.CONFIG_ORIGIN_X, 28, -110)
+    configFields.originX = CreateNumericField(frame, "OriginX", 103, -104, 52)
+    CreateLabel(frame, L.CONFIG_ORIGIN_Y, 180, -110)
+    configFields.originY = CreateNumericField(frame, "OriginY", 255, -104, 52)
+    local originNote = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    originNote:SetPoint("TOPLEFT", frame, "TOPLEFT", 330, -104)
+    originNote:SetWidth(290)
+    originNote:SetJustifyH("LEFT")
+    originNote:SetText(L.CONFIG_ORIGIN_NOTE)
 
-    CreateLabel(frame, L.CONFIG_CENTER_DEADZONE, 30, -180)
-    configFields.centerDeadzone = CreateNumericField(frame, "CenterDeadzone", 163, -174, 58)
-    CreateLabel(frame, "0", 267, -180)
+    CreateLabel(frame, L.CONFIG_DISTANCE_SECTION, 24, -152, "GameFontNormal")
+    CreateLabel(frame, L.CONFIG_POINT, 30, -180)
+    CreateLabel(frame, L.CONFIG_DISTANCE, 150, -180)
+    CreateLabel(frame, L.CONFIG_OUTER, 244, -180)
 
-    CreateLabel(frame, "2", 30, -210)
-    configFields.curveDistance2 = CreateNumericField(frame, "CurveDistance2", 163, -204, 58)
-    configFields.curveRadius2 = CreateNumericField(frame, "CurveRadius2", 257, -204, 58)
+    CreateLabel(frame, L.CONFIG_CENTER_DEADZONE, 30, -210)
+    configFields.centerDeadzone = CreateNumericField(frame, "CenterDeadzone", 163, -204, 58)
+    CreateLabel(frame, "0", 267, -210)
 
-    CreateLabel(frame, "3", 30, -240)
-    configFields.curveDistance3 = CreateNumericField(frame, "CurveDistance3", 163, -234, 58)
-    configFields.curveRadius3 = CreateNumericField(frame, "CurveRadius3", 257, -234, 58)
+    CreateLabel(frame, "2", 30, -240)
+    configFields.curveDistance2 = CreateNumericField(frame, "CurveDistance2", 163, -234, 58)
+    configFields.curveRadius2 = CreateNumericField(frame, "CurveRadius2", 257, -234, 58)
 
-    CreateLabel(frame, "4", 30, -270)
-    configFields.curveDistance4 = CreateNumericField(frame, "CurveDistance4", 163, -264, 58)
-    configFields.curveRadius4 = CreateNumericField(frame, "CurveRadius4", 257, -264, 58)
+    CreateLabel(frame, "3", 30, -270)
+    configFields.curveDistance3 = CreateNumericField(frame, "CurveDistance3", 163, -264, 58)
+    configFields.curveRadius3 = CreateNumericField(frame, "CurveRadius3", 257, -264, 58)
 
-    CreateLabel(frame, "5", 30, -300)
-    configFields.curveDistance5 = CreateNumericField(frame, "CurveDistance5", 163, -294, 58)
-    configFields.curveRadius5 = CreateNumericField(frame, "CurveRadius5", 257, -294, 58)
+    CreateLabel(frame, "4", 30, -300)
+    configFields.curveDistance4 = CreateNumericField(frame, "CurveDistance4", 163, -294, 58)
+    configFields.curveRadius4 = CreateNumericField(frame, "CurveRadius4", 257, -294, 58)
 
-    CreateLabel(frame, L.CONFIG_CURVE_PREVIEW, 352, -150)
+    CreateLabel(frame, "5", 30, -330)
+    configFields.curveDistance5 = CreateNumericField(frame, "CurveDistance5", 163, -324, 58)
+    configFields.curveRadius5 = CreateNumericField(frame, "CurveRadius5", 257, -324, 58)
+
+    CreateLabel(frame, L.CONFIG_CURVE_PREVIEW, 352, -180)
     curvePreview = CreateFrame("Frame", "WanderingGaiaCurvePreview", frame)
     curvePreview:SetWidth(260)
     curvePreview:SetHeight(140)
-    curvePreview:SetPoint("TOPLEFT", frame, "TOPLEFT", 352, -170)
+    curvePreview:SetPoint("TOPLEFT", frame, "TOPLEFT", 352, -200)
     curvePreview:SetBackdrop({
         bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -854,35 +880,35 @@ local function CreateConfigFrame()
         curveMarkers[i] = marker
     end
 
-    CreateLabel(frame, L.CONFIG_BELL_SECTION, 24, -338, "GameFontNormal")
-    CreateLabel(frame, L.CONFIG_NEAR_SIZE, 30, -367)
-    configFields.nearSize = CreateNumericField(frame, "NearSize", 100, -361, 58)
-    CreateLabel(frame, L.CONFIG_FAR_SIZE, 185, -367)
-    configFields.farSize = CreateNumericField(frame, "FarSize", 245, -361, 58)
-    CreateLabel(frame, L.CONFIG_SMOOTHING, 330, -367)
-    configFields.smoothing = CreateNumericField(frame, "Smoothing", 425, -361, 58)
+    CreateLabel(frame, L.CONFIG_BELL_SECTION, 24, -368, "GameFontNormal")
+    CreateLabel(frame, L.CONFIG_NEAR_SIZE, 30, -397)
+    configFields.nearSize = CreateNumericField(frame, "NearSize", 100, -391, 58)
+    CreateLabel(frame, L.CONFIG_FAR_SIZE, 185, -397)
+    configFields.farSize = CreateNumericField(frame, "FarSize", 245, -391, 58)
+    CreateLabel(frame, L.CONFIG_SMOOTHING, 330, -397)
+    configFields.smoothing = CreateNumericField(frame, "Smoothing", 425, -391, 58)
 
     useZCheck = CreateFrame("CheckButton", "WanderingGaiaConfigUseZ", frame, "UICheckButtonTemplate")
-    useZCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 505, -354)
+    useZCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 505, -384)
     local useZLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     useZLabel:SetPoint("LEFT", useZCheck, "RIGHT", 2, 0)
     useZLabel:SetText(L.CONFIG_USE_Z)
 
     local zNote = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    zNote:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -398)
+    zNote:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -428)
     zNote:SetWidth(590)
     zNote:SetJustifyH("LEFT")
     zNote:SetText(L.CONFIG_Z_NOTE)
 
     configStatus = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    configStatus:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -422)
+    configStatus:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -452)
     configStatus:SetWidth(250)
     configStatus:SetJustifyH("LEFT")
 
     local apply = CreateFrame("Button", "WanderingGaiaConfigApply", frame, "UIPanelButtonTemplate")
     apply:SetWidth(90)
     apply:SetHeight(24)
-    apply:SetPoint("TOPLEFT", frame, "TOPLEFT", 292, -414)
+    apply:SetPoint("TOPLEFT", frame, "TOPLEFT", 292, -444)
     apply:SetText(L.CONFIG_APPLY)
     apply:SetScript("OnClick", function()
         ApplyConfigFields()
@@ -906,12 +932,12 @@ local function CreateConfigFrame()
         FocusSettingsExport()
     end)
 
-    CreateLabel(frame, L.CONFIG_EXPORT_LABEL, 30, -458)
+    CreateLabel(frame, L.CONFIG_EXPORT_LABEL, 30, -488)
 
     settingsExportBox = CreateFrame("EditBox", "WanderingGaiaConfigExport", frame, "InputBoxTemplate")
     settingsExportBox:SetWidth(575)
     settingsExportBox:SetHeight(24)
-    settingsExportBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -478)
+    settingsExportBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -508)
     settingsExportBox:SetAutoFocus(false)
     settingsExportBox:SetMaxLetters(1024)
     settingsExportBox:SetScript("OnEscapePressed", function()
@@ -922,7 +948,7 @@ local function CreateConfigFrame()
     end)
 
     local copyHint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    copyHint:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -510)
+    copyHint:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -540)
     copyHint:SetText(L.CONFIG_COPY_HINT)
 
     if UISpecialFrames then
@@ -938,6 +964,8 @@ ApplyConfigFields = function()
     settings.deadzoneRight = ReadField(configFields.deadzoneRight, settings.deadzoneRight)
     settings.deadzoneUp = ReadField(configFields.deadzoneUp, settings.deadzoneUp)
     settings.deadzoneDown = ReadField(configFields.deadzoneDown, settings.deadzoneDown)
+    settings.originX = ReadField(configFields.originX, settings.originX)
+    settings.originY = ReadField(configFields.originY, settings.originY)
 
     settings.centerDeadzone = ReadField(configFields.centerDeadzone, settings.centerDeadzone)
     settings.curveDistance2 = ReadField(configFields.curveDistance2, settings.curveDistance2)
@@ -1091,6 +1119,8 @@ local function UpdateCoordsDisplay()
     if geometry.curvePercent ~= nil and geometry.bellSize ~= nil and geometry.offsetX ~= nil and geometry.offsetY ~= nil then
         table.insert(lines, string.format(
             L.COORDS_PLACEMENT,
+            settings.originX,
+            settings.originY,
             geometry.curvePercent * 100,
             geometry.bellSize,
             geometry.offsetX,
