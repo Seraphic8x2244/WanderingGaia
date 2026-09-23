@@ -3,7 +3,8 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.7-dev`
-- Current implementation head ready for in-game test: `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`.
+- Current handoff head: `c02259ebf47a724ac3e395457b6cb97a62e91445`.
+- `0.1.7-dev` one-time settings revision reset is user-verified: first load reset to the promoted defaults including `Outer Up = 60`, and a subsequent user change persisted across restart.
 - Current defaults: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
 - Settings revision `2` intentionally resets pre-0.1.7 saved tuning once, then normal persistence resumes.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
@@ -43,6 +44,7 @@
 - `0.1.2-dev` runtime result: user reports the config controls are good overall; the remaining usability gap was the inability to move the visual origin downward to match the apparent player position.
 - Bell swing animation timing remains `0.07` seconds per sprite step and was deliberately not made configurable.
 - `0.1.4-dev` first ellipse test: user reports the ellipse geometry removes the previous jitter and already feels intuitive.
+- `0.1.7-dev` settings revision `2` is user-verified: old tuning reset exactly once to the promoted defaults, including `Outer Up = 60`, and later edits persisted across restart rather than resetting twice.
 
 ## Implemented / Awaiting Test
 - `0.1.7-dev` asymmetric outer ellipse tuning model:
@@ -66,7 +68,6 @@
 - `/wg test [on|off]` remains the local target preview path.
 
 ## Current Issues
-- `0.1.7-dev` default-profile/reset behaviour is statically checked but not yet verified in WoW.
 - Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
 - Real ring communication remains intentionally untouched until the local bell tuning baseline is settled.
@@ -74,25 +75,32 @@
 ## Testing
 
 ### Last Test
-- `0.1.4-dev` ellipse geometry was user-tested positively: the ellipse model removed the previous jitter and felt intuitive.
-- User then tuned and supplied the final profile: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
-- `0.1.7-dev` promotes that profile to defaults and intentionally wipes older saved tuning once so those defaults actually load.
+- Version/state: `0.1.7-dev` on handoff commit `c02259ebf47a724ac3e395457b6cb97a62e91445`.
+- Passed in WoW: first load replaced the old tuning with the promoted defaults, including `Outer Up = 60`.
+- Passed in WoW: after changing a setting and restarting, the changed value persisted, confirming settings revision `2` resets only once.
+- Geometry does not need further retuning unless a real issue appears.
 
 ### Next Test
-- Update through TocPilot to `0.1.7-dev` / `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`.
-- On first load, confirm the previous saved tuning has been replaced by the new defaults, including `Outer Up = 60`.
-- Change one value, reload/restart again, and confirm the settings revision does not reset a second time.
-- Run `/wg test on` briefly to confirm the promoted defaults retain the expected ellipse feel, 3D range and range-based bell sizing.
-- Static verification passed for all supplied default values and the one-time reset/preserve branches; no GitHub Actions/CI workflow exists in this repository.
+- No geometry test is currently required.
+- Next runtime work is the Ring Bell communication/control slice described below.
+- Use the proven Vanilla 1.12.1 communication pattern from `Seraphic8x2244/pfui_tankicons`: `SendAddonMessage(prefix, payload, "RAID"/"PARTY")`, receive `CHAT_MSG_ADDON` through legacy `arg1`/`arg2`/`arg4`, and do not use modern addon-prefix registration APIs.
+- No GitHub Actions/CI workflow exists in this repository.
 
 ## Planned / To-do
 
 ### 1. Ring Bell
-- Keep the recipient's addon normally silent and visually absent.
-- On the sender's client, show a small bell control when targeting the intended partner character.
-- Clicking the bell sends a lightweight addon event to the recipient through a 1.12.1-compatible group channel.
-- The recipient displays a short bell visual and plays the bell sound locally.
-- No pseudo-security/authorized-ringer system; this is a personal addon, not an access-control mechanism.
+- Runtime starts in **client mode**: the player can be rung but sees no sender control.
+- `/wg ringer` switches the current session into **control/ringer mode**; provide a simple way to return to client mode.
+- Client and ringer modes are mutually exclusive.
+- Communication is group-scoped and must mirror the proven `pfUI_TankIcons` Vanilla 1.12.1 pattern: RAID when raided, PARTY when partied, `CHAT_MSG_ADDON` legacy event arguments, no modern prefix-registration API.
+- Use a lightweight query/announce handshake so a controller knows which current group members are actively in client mode.
+- In ringer mode, show the small sender bell control only while the current target has positively announced client mode.
+- Clicking the sender bell starts a ring for that targeted client; clicking it again for the same active client cancels the ring.
+- The recipient keeps the normal addon visually silent until rung.
+- While rung, the recipient resolves the sender to the current party/raid unit token and uses the existing directional/distance geometry for bell placement when available.
+- The recipient can cancel an active ring by targeting/clicking the active ringer's character; send a cancellation message so the controller can clear its active state too.
+- Keep ring/cancel state explicit in the wire protocol; do not infer cancellation merely from target changes on the controller.
+- No pseudo-security/authorized-ringer system; group membership plus active client-mode announcement is the intended scope.
 - Keep the approved PNG as source artwork and the committed 256x64 32-bit uncompressed TGA as the WoW 1.12.1 runtime texture.
 
 ### 2. Direction and Distance Hint
@@ -135,4 +143,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-User-test `0.1.7-dev` / implementation commit `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`: confirm first load wipes the old tuning and loads the exact promoted defaults with Outer Up = 60; then change one setting and restart once more to confirm revision 2 preserves subsequent changes rather than resetting again. If that passes, continue bell feature work from the planned Ring Bell section rather than retuning geometry further unless a real issue appears.
+Implement the first Ring Bell communication/control slice without changing the tested geometry: mirror `pfUI_TankIcons`' Vanilla 1.12.1 addon-message pattern, add session-default client mode plus `/wg ringer` control mode, discover active client-mode group members, and show the sender bell control only for a discovered client target. Wire ring/cancel state so the controller can toggle the ring and the recipient can cancel by targeting the active ringer. Keep this work on `dev` and mark it untested until verified in WoW.
