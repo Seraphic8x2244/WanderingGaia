@@ -150,6 +150,12 @@
 - `0.1.8` and earlier clients ignore the unknown `POSQ`/`POS` messages and keep their existing behavior.
 - Static checks: no modern comm APIs, no missing locale keys, existing `RING`/`CANCEL` protocol unchanged, approximately 128 top-level chunk locals, no CI available.
 
+## Stable 0.1.9 Promotion
+- Stable `0.1.9` promotion is explicitly authorized by the user despite the new `0.1.9-dev` refinements not yet receiving a separate two-client verification pass.
+- Promotion must preserve `main`'s artwork-only README and `artwork/wanderinggaia.png`.
+- Build stable runtime from current `dev`, strip the solo debug harness, use stable title/version `WanderingGaia` / `0.1.9`, and leave development docs off `main`.
+- Promote via a release branch based on current `main` so main-only presentation assets are retained.
+
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
 - Real two-client/cross-client validation until after the surprise is delivered or a safe unrelated second client becomes available.
@@ -157,13 +163,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-User-test the complete `0.1.9-dev` build on both clients before touching `main`:
-1. Reload both clients and confirm no Lua errors.
-2. Verify sender-control behavior: mirrored-above-centre position, static when inactive, animated when active, left click ring/re-ring with ~3.14s throttle, right click immediate stop.
-3. Ring Gaia while close enough that her local `UnitPosition(ringer)` works; normal directional/distance behavior should be unchanged.
-4. Move the ringer far enough that Gaia previously snapped to centre. The first local-position failure should preserve the cached direction immediately; within the remote refresh cycle the bell should continue tracking the ringer's transmitted position instead of freezing permanently.
-5. While the ringer remains far away and moves, Gaia's bell endpoint should refresh roughly once per second while Gaia's own movement/turning remains smooth at the normal update rate.
-6. Return inside local positional visibility; remote requests should stop automatically and live local direction/distance should resume.
-7. Right-click stop while far away; the bell should disappear immediately and position requests must cease.
-8. Recheck already-targeting-ringer cancellation semantics and normal target-away/target-back cancellation.
-Do not promote to stable until this full real two-client path is user-verified.
+Promote current `0.1.9-dev` runtime to stable `0.1.9` on `main` as explicitly authorized: branch from current `main`, replace only the stable runtime/TOC with a debug-free build from `dev`, preserve the artwork-only README and `artwork/wanderinggaia.png`, statically verify Vanilla APIs/protocol/local limits and release contents, merge, then record the resulting stable commit and hand off to a fresh chat.
