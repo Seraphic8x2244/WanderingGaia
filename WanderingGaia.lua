@@ -96,16 +96,6 @@ local function PrintMessage(message)
     end
 end
 
-local function Clamp(value, minimum, maximum)
-    if value < minimum then
-        return minimum
-    elseif value > maximum then
-        return maximum
-    end
-
-    return value
-end
-
 local function FormatNumber(value)
     if value == math.floor(value) then
         return tostring(math.floor(value))
@@ -458,18 +448,9 @@ local function ComputePlacement(applySmoothing)
         outerRadiusY
     )
 
-    if outerDistance < innerDistance then
-        outerDistance = innerDistance
-    end
-
     local travelDistance = innerDistance + ((outerDistance - innerDistance) * percent)
     local rawX = originX + (geometry.directionX * travelDistance)
     local rawY = originY + (geometry.directionY * travelDistance)
-
-    -- Last-resort physical-screen safety clamp. The ellipse remains the normal
-    -- limiter, but a deliberately extreme origin/ellipse cannot lose the bell.
-    rawX = Clamp(rawX, (-width / 2) + half, (width / 2) - half)
-    rawY = Clamp(rawY, (-height / 2) + half, (height / 2) - half)
 
     geometry.originX = originX
     geometry.originY = originY
