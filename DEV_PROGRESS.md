@@ -2,9 +2,12 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.8-dev`
+- Version: `0.1.9-dev`
 - Latest dev handoff/test commit before release prep: `e55c712e1ce806cf0412732057deabc602eb7393`.
 - Release-prep documentation commit: `f7c403e491077b86dd2a4b289b4fa89d7abe81c2`.
+- `0.1.9-dev` Ring Bell refinement implementation: `7d21ab0189db669cc8a294f7a400deed048fe397`.
+- Stale-position lifetime cleanup: `3c92f85ed07cc16a9147ffed710d570024ebfe86`.
+- `0.1.9-dev` version bump: `694881e735323863b6597f74647db31d72af3f1d`.
 - Stable `main` release commit: `889a4a5daf1807e7a104b3eae413d26aa3468249` (`0.1.8`).
 - Stable promotion PR: `#1`, squash-merged.
 - Ring Bell implementation commit: `11f53ec97031b7f9463c8224d327110e0980cef4`.
@@ -104,18 +107,27 @@
 - Everything else in the planned solo test behaved as described.
 - This confirms the local UI/state/sound/geometry/cancel paths. It does not validate real PARTY/RAID addon-message delivery between two clients.
 
-## Next Dev Slice — 0.1.9-dev
-- User reports the real stable `0.1.8` surprise worked perfectly.
-- At sufficiently long range, ClassicAPI `UnitPosition(ringer)` becomes unavailable because the remote unit leaves the client-visible object set. Current runtime then falls back to the configured visual origin.
-- Requested compromise: cache each active ringer's last known world position/map. If live ringer position disappears, keep reading the recipient's current position/facing and recompute bearing toward that cached endpoint; force stale-position presentation to the outer-distance end of the existing curve. Resume live position automatically when available again, and discard stale position across map/instance mismatch.
-- Sender control bell changes:
-  - animate while the currently targeted recipient has an active outgoing ring;
-  - stop on a static frame when inactive;
-  - move it above screen centre by the same magnitude that the configured visual origin/deadzone is shifted below centre (default Origin Y = -10% -> control at +10% screen height);
-  - left click sends/rerings `RING:1`;
-  - left-click ring sends are throttled only by `2 * gaiasbell.wav` duration (processed WAV duration ~1.57s -> ~3.14s);
-  - right click sends `RING:0` immediately with no stop throttle.
-- Preserve independent per-recipient state and all already-tested recipient behavior, including: a recipient already targeting the ringer when a new ring arrives must still receive the ring; only a later target-change onto the ringer cancels it.
+## Implemented / Awaiting Test — 0.1.9-dev
+- User reports the real stable `0.1.8` surprise worked perfectly, including real discovery and PARTY/RAID transport.
+- Long-range fallback now caches the active ringer's last known west/north/Z/map while live `UnitPosition(ringer)` data is available.
+- When the ringer leaves ClassicAPI's visible-object range:
+  - the cached ringer endpoint freezes;
+  - the recipient's current position and facing remain live;
+  - bearing is recomputed continuously from the recipient's current position to the cached ringer endpoint;
+  - the bell is forced to the outer ellipse / far-size end of the existing geometry;
+  - live ringer position resumes automatically as soon as `UnitPosition` returns again;
+  - cached position is discarded when the ring stops/cancels or the recipient changes map/instance.
+- If a ring starts while the ringer is already too far away and no current-ring cache exists yet, the existing non-directional origin fallback remains unavoidable until live position becomes available.
+- Sender control bell:
+  - is positioned above screen centre by the mirror of the configured visual-origin Y offset (default Origin Y = -10% -> control at +10% UI height);
+  - animates only while the currently targeted recipient has an active outgoing ring;
+  - returns to frame 1 and stops animating when inactive;
+  - registers both `LeftButtonUp` and `RightButtonUp` using the Vanilla button API;
+  - left click sends `RING:1` even when already active, allowing a re-ring;
+  - left-click sends are throttled per recipient to `2 * 1.57s = 3.14s`;
+  - right click clears local outgoing state and sends `RING:0` immediately with no stop throttle.
+- Existing independent per-recipient ring state remains intact.
+- Existing recipient cancellation semantics are unchanged: already targeting the ringer when `RING:1` arrives does not suppress the ring; only a later `PLAYER_TARGET_CHANGED` onto that ringer cancels it.
 
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
@@ -124,4 +136,13 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Implement `0.1.9-dev` on `dev` only: last-known remote-position fallback at outer distance, active/inactive sender-bell animation, mirrored upward sender-bell placement, and left-ring/right-stop controls with only the requested ~3.14s rerink throttle. Preserve the real Vanilla communication path and tested geometry. Then perform static Lua 5.0/API checks and user-test with the real two-client setup before any stable promotion.
+User-test `0.1.9-dev` with the real two-client setup before touching `main`:
+1. Confirm no Lua errors after reload.
+2. In ringer mode, target Gaia and confirm the sender bell is now above centre by the mirrored 10% default offset.
+3. Left click: Gaia should ring and the sender bell should animate.
+4. Left click again inside ~3.14s: no new ring sound/message effect should occur; after ~3.14s, left click should re-ring and replay the recipient sound while remaining active.
+5. Right click: recipient ring should stop immediately and the sender bell should become static.
+6. Ring while both characters are close enough for live direction, then move the ringer far enough that `UnitPosition` drops out. Gaia's bell should remain at the outer ellipse and continue changing screen direction as Gaia turns/moves, using the ringer's last known world position instead of snapping to centre.
+7. Return into positional visibility and confirm the bell resumes live direction/distance automatically.
+8. Recheck the already-targeting-ringer case: a new ring must still appear; cancellation requires targeting away and then back onto the ringer.
+Do not promote to stable until these behaviors are user-verified.
