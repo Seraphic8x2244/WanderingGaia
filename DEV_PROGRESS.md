@@ -2,12 +2,14 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.0-dev`
-- Implementation head ready for in-game test: `47d1823e593506349fab584a4bd5690a494430c7`
+- Version: `0.1.1-dev`
+- Implementation head ready for in-game test: `dc758a92572f1c562a78fbf21971c6eaf215ddb0`
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
-- `47d1823e593506349fab584a4bd5690a494430c7` - Center bell direction on the player/screen centre while retaining safe-area edge limits.
+- `dc758a92572f1c562a78fbf21971c6eaf215ddb0` - Bump WanderingGaia to 0.1.1-dev after direct UI-centre anchor fix.
+- `82c479f0913e757464872b49ea3ff218dc4dc240` - Anchor bell directly to UIParent CENTER instead of reconstructing centre from BOTTOMLEFT coordinates.
+- `47d1823e593506349fab584a4bd5690a494430c7` - Earlier attempted screen-centre fix; runtime test showed the bell still orbiting an off-centre origin.
 - `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a` - Store bell runtime texture as uncompressed TGA.
 - `6a9743191248c5ed60a852da3dd5ded9a727df24` - Add uploaded bell runtime TGA to `artwork/`.
 - `0b793578eccb613a45fdf3350ab40e16efdf43e6` - Add local directional bell preview.
@@ -31,7 +33,7 @@
 - Initial feature scope agreed and recorded below.
 - Four-frame bell swing artwork approved by the user and committed as `artwork/WanderingGaia_BellSwing_256x64.png`.
 - Runtime bell texture committed as `artwork/WanderingGaia_BellSwing_256x64.tga` and statically verified as TGA image type 2 (uncompressed true-colour), 256x64, 32-bit.
-- No runtime behaviour has been user-tested yet.
+- Runtime testing has begun; directional tracking is user-verified, while centre anchoring failed in `0.1.0-dev` and is corrected for retest in `0.1.1-dev`.
 
 ## Implemented / Awaiting Test
 - Development scaffold:
@@ -58,25 +60,26 @@
 ## Current Issues
 - Character names/identifiers for the two intended users have not yet been added to implementation.
 - Directional tracking is user-verified as working well in game.
-- The previous origin used the centre of the safe playfield, which made the bell appear vertically high; this has now been changed to the physical screen centre and needs a focused retest.
-- Distance curve, safe-area edge limiting and swing animation still need explicit confirmation after the origin change.
+- Runtime test of `0.1.0-dev` at `1ac27ad` showed the bell orbiting around a visibly off-centre origin even though direction changed correctly.
+- `0.1.1-dev` now anchors the bell directly to `UIParent` `CENTER`; this specific correction is awaiting in-game confirmation.
+- Distance curve, safe-area edge limiting and swing animation still need explicit confirmation after the centre-anchor correction.
 
 ## Testing
 
 ### Last Test
-- Version/commit: None
-- Passed: None
-- Failed: None
-- Not tested: All runtime behaviour.
+- Version/commit: `0.1.0-dev` / `1ac27addfbe9a40f76989ce520025491f7d04f92`
+- Passed: directional movement/bearing behaved very well while rotating around the target.
+- Failed: the bell's orbit origin was visibly offset left from the screen centre.
+- Not fully confirmed: distance curve, safe-area edge limits and full swing animation.
 
 ### Next Test
-- Focused local target-preview retest on implementation head `47d1823e593506349fab584a4bd5690a494430c7`:
-  - with a target effectively overlapping the player, confirm the bell sits at the true visual centre of the screen;
-  - rotate around a target and confirm the already-good directional tracking is unchanged;
-  - confirm the bell still stops before the excluded left 20%, right 20% and bottom 30% safe-area boundaries;
-  - move toward and away from the target and confirm the distance radius still feels correct from the new origin;
-  - confirm the mirrored four-frame swing still renders correctly;
-  - report any Lua errors, directional regression, bad clamping, or distance feel issues before changing implementation.
+- Focused centre-anchor retest on `0.1.1-dev` / `dc758a92572f1c562a78fbf21971c6eaf215ddb0`:
+  - update WanderingGaia through TocPilot and confirm the loaded addon reports `0.1.1-dev`;
+  - target the same nearby NPC used for the failed `0.1.0-dev` test;
+  - rotate in place and confirm the bell's circular/orbital movement is centred on the actual visual centre of the UI, not offset left;
+  - if the API-reported distance falls inside the <=2 yard deadzone, confirm the bell lands exactly at UI centre;
+  - confirm directional movement itself remains unchanged;
+  - report the result before changing distance or safe-area behaviour.
 
 ## Planned / To-do
 
@@ -108,8 +111,9 @@
   - right 20% excluded;
   - bottom 30% excluded;
   - top remains available apart from icon padding.
-- Use the literal physical screen centre as the positional origin because direction is relative to the player character.
-- Cast the directional ray from screen centre and place the bell by percentage of usable distance to the intersected safe-area boundary.
+- Use `UIParent`'s actual `CENTER` anchor as the positional origin because direction is relative to the player character.
+- Express bell travel only as offsets from that centre anchor; do not reconstruct the centre from `BOTTOMLEFT` coordinates.
+- Cast the directional ray from the centre anchor and place the bell by percentage of usable distance to the intersected safe-area boundary.
 - Keep the bell frame itself fully inside the usable region.
 
 ### 4. Blessing of Protection Gag
@@ -134,4 +138,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-User-test `/wgtest on` on implementation head `47d1823e593506349fab584a4bd5690a494430c7` in WoW 1.12.1 with ClassicAPI. First confirm an overlapping/very-near target places the bell at the true visual screen centre, then rotate around a target to ensure directional tracking remains correct, verify the existing safe-area boundaries still clamp travel, and check distance feel plus the mirrored swing animation. Report the observed behaviour and any Lua errors before further changes.
+Update through TocPilot to `0.1.1-dev` / implementation head `dc758a92572f1c562a78fbf21971c6eaf215ddb0`, then repeat the same nearby-NPC `/wgtest on` rotation test that exposed the off-centre orbit. Confirm that the orbit is now centred on the true UI centre and that direction remains correct. Do not change distance, safe-area or communication behaviour until this centre-anchor retest is reported.
