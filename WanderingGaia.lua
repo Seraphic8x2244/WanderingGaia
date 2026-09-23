@@ -770,6 +770,7 @@ local function DeactivateIncomingRing(sender)
 
     entry.active = false
     entry.hasSmoothedPosition = false
+    ClearLastKnownPosition(entry)
     entry.frame:Hide()
 end
 
