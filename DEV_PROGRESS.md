@@ -40,6 +40,7 @@
 
 ## Current Issues
 - Character names/identifiers for the two intended users have not yet been added to implementation.
+- Before involving the recipient, directional placement needs a local target-preview test path.
 - The committed bell PNG is source artwork; a WoW 1.12.1 runtime texture format such as 32-bit TGA still needs to be produced before the addon can load it in game.
 
 ## Testing
@@ -114,4 +115,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Convert the approved 256x64 bell sprite to a WoW 1.12.1-compatible 32-bit TGA, then implement the first Bell slice on `dev`: intended-partner target detection, sender-side clickable bell control, 1.12.1-compatible ring transport, and recipient-side centred bell presentation with a clean fallback path. Keep ClassicAPI directional/distance placement as the next enhancement after the basic ring path is confirmed working in game.
+Build a local target-preview test harness first so the directional system can be validated without involving the recipient: convert the approved sprite to a WoW 1.12.1-compatible 32-bit TGA, add a `/wgtest` toggle, and while enabled place/animate the bell on the local screen from the player's facing to the current target using ClassicAPI `GetPlayerFacing()` + `UnitPosition()`, including the safe-area and distance curve. After that is user-tested, wire the same placement code to real ring communication.
