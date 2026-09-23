@@ -8,6 +8,8 @@ local TWO_PI = PI * 2
 local BELL_TEXTURE = "Interface\\AddOns\\WanderingGaia\\artwork\\WanderingGaia_BellSwing_256x64"
 local BELL_SOUND = "Interface\\AddOns\\WanderingGaia\\artwork\\gaiasbell.wav"
 local COMM_PREFIX = "WanderingGaia"
+local RING_SOUND_DURATION = 1.57
+local RING_THROTTLE = RING_SOUND_DURATION * 2
 local POSITION_INTERVAL = 0.05
 local COORDS_INTERVAL = 0.10
 local ANIMATION_INTERVAL = 0.07
@@ -71,7 +73,10 @@ local debugClients = {}
 local debugUnitOverrides = {}
 local controlButton = nil
 local controlTexture = nil
-local ToggleOutgoingRing
+local controlAnimationElapsed = 0
+local controlAnimationIndex = 1
+local lastRingSentAt = {}
+local HandleControlClick
 
 local ApplyConfigFields
 local ResetConfigDefaults
@@ -317,14 +322,27 @@ local function HasDirectionalAPI()
     return true
 end
 
-local function UpdateGeometry(unit)
+local function ClearLastKnownPosition(positionState)
+    if not positionState then
+        return
+    end
+
+    positionState.lastKnownWest = nil
+    positionState.lastKnownNorth = nil
+    positionState.lastKnownZ = nil
+    positionState.lastKnownInstance = nil
+end
+
+local function UpdateGeometry(unit, positionState)
     unit = unit or "target"
+
     local playerWest, playerNorth, playerZ, playerInstance = GetClassicAPIPosition("player")
     local facing = nil
 
     geometry.hasPlayer = false
     geometry.hasTarget = false
     geometry.valid = false
+    geometry.usingStaleTarget = false
 
     if type(GetPlayerFacing) == "function" then
         facing = GetPlayerFacing()
@@ -341,12 +359,41 @@ local function UpdateGeometry(unit)
     geometry.playerInstance = playerInstance
     geometry.facing = facing
 
-    if not UnitExists(unit) then
-        return false
+    local targetWest = nil
+    local targetNorth = nil
+    local targetZ = nil
+    local targetInstance = nil
+
+    if UnitExists(unit) then
+        targetWest, targetNorth, targetZ, targetInstance = GetClassicAPIPosition(unit)
     end
 
-    local targetWest, targetNorth, targetZ, targetInstance = GetClassicAPIPosition(unit)
-    if targetWest == nil or targetNorth == nil or targetInstance == nil or targetInstance ~= playerInstance then
+    if targetWest ~= nil and targetNorth ~= nil and targetInstance ~= nil then
+        if targetInstance ~= playerInstance then
+            ClearLastKnownPosition(positionState)
+            return false
+        end
+
+        if positionState then
+            positionState.lastKnownWest = targetWest
+            positionState.lastKnownNorth = targetNorth
+            positionState.lastKnownZ = targetZ
+            positionState.lastKnownInstance = targetInstance
+        end
+    elseif positionState
+        and positionState.lastKnownWest ~= nil
+        and positionState.lastKnownNorth ~= nil
+        and positionState.lastKnownInstance == playerInstance
+    then
+        targetWest = positionState.lastKnownWest
+        targetNorth = positionState.lastKnownNorth
+        targetZ = positionState.lastKnownZ
+        targetInstance = positionState.lastKnownInstance
+        geometry.usingStaleTarget = true
+    else
+        if positionState and positionState.lastKnownInstance ~= nil and positionState.lastKnownInstance ~= playerInstance then
+            ClearLastKnownPosition(positionState)
+        end
         return false
     end
 
@@ -377,7 +424,14 @@ local function UpdateGeometry(unit)
         geometry.distance3D = nil
     end
 
-    if geometry.distance3D ~= nil then
+    if geometry.usingStaleTarget then
+        if geometry.distance3D ~= nil then
+            geometry.distance = geometry.distance3D
+        else
+            geometry.distance = geometry.distance2D
+        end
+        geometry.rangeMode = "stale last-known"
+    elseif geometry.distance3D ~= nil then
         geometry.distance = geometry.distance3D
         geometry.rangeMode = "3D"
     else
@@ -395,7 +449,7 @@ local function UpdateGeometry(unit)
 end
 
 local function ComputePlacementForUnit(unit, applySmoothing, smoothingState)
-    if not UpdateGeometry(unit) then
+    if not UpdateGeometry(unit, smoothingState) then
         return false
     end
 
@@ -408,6 +462,11 @@ local function ComputePlacementForUnit(unit, applySmoothing, smoothingState)
     end
 
     local percent = DistancePercent(geometry.distance)
+
+    if geometry.usingStaleTarget then
+        percent = 1
+    end
+
     local bellSize = math.max(1, BellSizeForPercent(percent))
     local half = bellSize / 2
     local originX = width * (settings.originX / 100)
@@ -649,6 +708,10 @@ local function CreateIncomingRing(sender)
         hasSmoothedPosition = false,
         smoothedX = 0,
         smoothedY = 0,
+        lastKnownWest = nil,
+        lastKnownNorth = nil,
+        lastKnownZ = nil,
+        lastKnownInstance = nil,
     }
 
     incomingRings[sender] = entry
@@ -742,6 +805,51 @@ local function AnimateIncomingRings(frameIndex, mirrored)
     end
 end
 
+local function PositionControlButton()
+    if not controlButton then
+        return
+    end
+
+    local height = UIParent:GetHeight() or 0
+    local offsetY = height * ((0 - settings.originY) / 100)
+
+    controlButton:ClearAllPoints()
+    controlButton:SetPoint("CENTER", UIParent, "CENTER", 0, offsetY)
+end
+
+local function CurrentControlTarget()
+    if runtimeMode ~= "ringer" or not UnitExists("target") then
+        return nil
+    end
+
+    local targetName = UnitName("target")
+
+    if not targetName or not knownClients[targetName] then
+        return nil
+    end
+
+    return targetName
+end
+
+local function ControlRingActive()
+    local targetName = CurrentControlTarget()
+
+    if not targetName then
+        return false
+    end
+
+    return outgoingRings[targetName] and true or false
+end
+
+local function ResetControlAnimation()
+    controlAnimationElapsed = 0
+    controlAnimationIndex = 1
+
+    if controlTexture then
+        SetBellSpriteTexture(controlTexture, 1, false)
+    end
+end
+
 local function CreateControlButton()
     if controlButton then
         return
@@ -750,8 +858,8 @@ local function CreateControlButton()
     controlButton = CreateFrame("Button", "WanderingGaiaRingControl", UIParent)
     controlButton:SetWidth(42)
     controlButton:SetHeight(42)
-    controlButton:SetPoint("CENTER", UIParent, "CENTER", 0, -145)
     controlButton:SetFrameStrata("DIALOG")
+    controlButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
     controlTexture = controlButton:CreateTexture(nil, "ARTWORK")
     controlTexture:SetAllPoints(controlButton)
@@ -759,26 +867,24 @@ local function CreateControlButton()
     SetBellSpriteTexture(controlTexture, 1, false)
 
     controlButton:SetScript("OnClick", function()
-        if ToggleOutgoingRing then
-            ToggleOutgoingRing()
+        if HandleControlClick then
+            HandleControlClick(arg1)
         end
     end)
 
+    PositionControlButton()
     controlButton:Hide()
 end
 
 local function UpdateControlButton()
     CreateControlButton()
+    PositionControlButton()
 
-    if runtimeMode ~= "ringer" or not UnitExists("target") then
+    local targetName = CurrentControlTarget()
+
+    if not targetName then
         controlButton:Hide()
-        return
-    end
-
-    local targetName = UnitName("target")
-
-    if not targetName or not knownClients[targetName] then
-        controlButton:Hide()
+        ResetControlAnimation()
         return
     end
 
@@ -786,6 +892,7 @@ local function UpdateControlButton()
         controlButton:SetAlpha(1.0)
     else
         controlButton:SetAlpha(0.70)
+        ResetControlAnimation()
     end
 
     controlButton:Show()
@@ -845,26 +952,44 @@ local function ProcessCommMessage(sender, message, simulated)
     end
 end
 
-ToggleOutgoingRing = function()
-    if runtimeMode ~= "ringer" or not UnitExists("target") then
+local function RingCurrentTarget()
+    local targetName = CurrentControlTarget()
+
+    if not targetName then
         return
     end
 
-    local targetName = UnitName("target")
+    local now = GetTime()
+    local lastSent = lastRingSentAt[targetName]
 
-    if not targetName or not knownClients[targetName] then
+    if lastSent and (now - lastSent) < RING_THROTTLE then
         return
     end
 
-    if outgoingRings[targetName] then
-        outgoingRings[targetName] = nil
-        SendComm("RING:0:" .. targetName)
-    else
-        outgoingRings[targetName] = true
-        SendComm("RING:1:" .. targetName)
-    end
-
+    lastRingSentAt[targetName] = now
+    outgoingRings[targetName] = true
+    SendComm("RING:1:" .. targetName)
     UpdateControlButton()
+end
+
+local function StopCurrentTarget()
+    local targetName = CurrentControlTarget()
+
+    if not targetName then
+        return
+    end
+
+    outgoingRings[targetName] = nil
+    SendComm("RING:0:" .. targetName)
+    UpdateControlButton()
+end
+
+HandleControlClick = function(mouseButton)
+    if mouseButton == "RightButton" then
+        StopCurrentTarget()
+    else
+        RingCurrentTarget()
+    end
 end
 
 local function ClearIncomingRings(sendCancellation)
@@ -1501,6 +1626,8 @@ ApplyConfigFields = function()
         PlaceBellForTarget()
     end
 
+    UpdateControlButton()
+
     if configStatus then
         configStatus:SetText(L.CONFIG_APPLIED)
     end
@@ -1516,6 +1643,8 @@ ResetConfigDefaults = function()
     if testEnabled then
         PlaceBellForTarget()
     end
+
+    UpdateControlButton()
 
     if configStatus then
         configStatus:SetText(L.CONFIG_RESET_DONE)
@@ -1782,8 +1911,9 @@ end
 local driver = CreateFrame("Frame")
 driver:SetScript("OnUpdate", function()
     local incomingActive = HasActiveIncomingRings()
+    local controlActive = ControlRingActive()
 
-    if not testEnabled and not coordsEnabled and not incomingActive then
+    if not testEnabled and not coordsEnabled and not incomingActive and not controlActive then
         return
     end
 
@@ -1821,6 +1951,22 @@ driver:SetScript("OnUpdate", function()
             animationIndex = animationIndex + 1
             if animationIndex > table.getn(swingFrames) then
                 animationIndex = 1
+            end
+        end
+    end
+
+    if controlActive then
+        controlAnimationElapsed = controlAnimationElapsed + arg1
+
+        if controlAnimationElapsed >= ANIMATION_INTERVAL then
+            controlAnimationElapsed = 0
+
+            local controlFrame = swingFrames[controlAnimationIndex]
+            SetBellSpriteTexture(controlTexture, controlFrame[1], controlFrame[2])
+
+            controlAnimationIndex = controlAnimationIndex + 1
+            if controlAnimationIndex > table.getn(swingFrames) then
+                controlAnimationIndex = 1
             end
         end
     end
