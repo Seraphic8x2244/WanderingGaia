@@ -3,7 +3,7 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.8-dev`
-- Latest implementation commit: `faab1321f3e73ed96cb1b24d4f26edae7e9f3023`.
+- Latest handoff/test commit: `e55c712e1ce806cf0412732057deabc602eb7393`.
 - Ring Bell implementation commit: `11f53ec97031b7f9463c8224d327110e0980cef4`.
 - Ring Bell locale commit: `1bbc32e33ce61dbb2311c8f8edb7fba8af4d6116`.
 - Solo-test plan/handoff pre-build commit: `d63ffc9f838bd4c7e522d59de42c0ea6e8d98afa`.
@@ -71,6 +71,12 @@
 - Single-file top-level local declaration count remains below the Lua 5.0 chunk-local limit.
 - No GitHub Actions/CI workflow exists; static inspection is not an in-game test.
 
+## Gift Build Preparation
+- Gift/stable build preparation is explicitly authorized by the user.
+- Preserve the confirmed cancellation edge case: if the client is already targeting the ringer when a new ring arrives, the ring must still appear and remain active; cancellation requires a later `PLAYER_TARGET_CHANGED` onto that ringer.
+- Before promotion, re-audit the real PARTY/RAID protocol against `pfUI_TankIcons`, remove all solo debug commands/state from the distributable build, retain `artwork/gaiasbell.wav`, and keep the user-tested geometry unchanged.
+- Stable target is `0.1.8` on `main`; `DEV_GUIDE.md`, `DEV_PROGRESS.md`, and dev-only simulation must not ship.
+
 ## Current Issues / Untested
 - `0.1.8-dev` has now passed the planned solo in-game test with no reported Lua errors.
 - Real cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and remote cancellation are intentionally untested before gifting.
@@ -94,4 +100,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Treat the `0.1.8-dev` Ring Bell local/runtime behavior as user-verified. Do not retune geometry. The only unverified Ring Bell risk is real cross-client PARTY/RAID transport, which is intentionally deferred to preserve the gift/surprise. Before any stable promotion, separate/remove the solo debug harness from the distributable stable build while preserving the real client/ringer runtime and explicit wire protocol.
+Prepare the one-shot gift build: audit the real Vanilla communication path against `pfUI_TankIcons`, cleanly remove the solo simulation/debug harness without changing real Ring Bell behavior, produce stable `0.1.8` metadata, statically verify Lua 5.0 / Interface 11200 compatibility and the already-targeting-ringer edge case, then promote only the cleaned distributable files/assets to `main`. Real cross-client transport remains the single intentionally unverified runtime risk.
