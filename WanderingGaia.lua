@@ -10,6 +10,7 @@ local BELL_SOUND = "Interface\\AddOns\\WanderingGaia\\artwork\\gaiasbell.wav"
 local COMM_PREFIX = "WanderingGaia"
 local RING_SOUND_DURATION = 1.57
 local RING_THROTTLE = RING_SOUND_DURATION * 2
+local POSITION_REQUEST_INTERVAL = 1.0
 local POSITION_INTERVAL = 0.05
 local COORDS_INTERVAL = 0.10
 local ANIMATION_INTERVAL = 0.07
@@ -712,10 +713,30 @@ local function CreateIncomingRing(sender)
         lastKnownNorth = nil,
         lastKnownZ = nil,
         lastKnownInstance = nil,
+        lastPositionRequestAt = nil,
     }
 
     incomingRings[sender] = entry
     return entry
+end
+
+local function RequestRemotePosition(entry)
+    if not entry or not entry.active or runtimeMode ~= "client" then
+        return
+    end
+
+    if debugUnitOverrides[entry.sender] then
+        return
+    end
+
+    local now = GetTime()
+
+    if entry.lastPositionRequestAt and (now - entry.lastPositionRequestAt) < POSITION_REQUEST_INTERVAL then
+        return
+    end
+
+    entry.lastPositionRequestAt = now
+    SendComm("POSQ:" .. entry.sender)
 end
 
 local function UpdateIncomingRingVisual(entry)
@@ -724,6 +745,19 @@ local function UpdateIncomingRingVisual(entry)
     end
 
     local unit = ResolveIncomingUnit(entry.sender)
+    local remotePositionAvailable = false
+
+    if unit then
+        local west, north, z, instanceID = GetClassicAPIPosition(unit)
+        if west ~= nil and north ~= nil and instanceID ~= nil then
+            remotePositionAvailable = true
+            entry.lastPositionRequestAt = nil
+        end
+    end
+
+    if not remotePositionAvailable then
+        RequestRemotePosition(entry)
+    end
 
     if unit and HasDirectionalAPI() and ComputePlacementForUnit(unit, true, entry) then
         entry.frame:SetWidth(geometry.bellSize)
@@ -770,6 +804,7 @@ local function DeactivateIncomingRing(sender)
 
     entry.active = false
     entry.hasSmoothedPosition = false
+    entry.lastPositionRequestAt = nil
     ClearLastKnownPosition(entry)
     entry.frame:Hide()
 end
@@ -899,6 +934,68 @@ local function UpdateControlButton()
     controlButton:Show()
 end
 
+local function SendPositionReply(recipient)
+    if not recipient or recipient == "" then
+        return
+    end
+
+    local west, north, z, instanceID = GetClassicAPIPosition("player")
+
+    if west == nil or north == nil or instanceID == nil then
+        return
+    end
+
+    local zText = "n"
+    if z ~= nil then
+        zText = string.format("%.3f", z)
+    end
+
+    SendComm(string.format(
+        "POS:%s:%s:%.3f:%.3f:%s",
+        recipient,
+        tostring(instanceID),
+        west,
+        north,
+        zText
+    ))
+end
+
+local function ApplyRemotePosition(sender, recipient, mapText, westText, northText, zText)
+    local playerName = UnitName("player")
+
+    if runtimeMode ~= "client" or recipient ~= playerName then
+        return
+    end
+
+    local entry = incomingRings[sender]
+    if not entry or not entry.active then
+        return
+    end
+
+    local instanceID = tonumber(mapText)
+    local west = tonumber(westText)
+    local north = tonumber(northText)
+    local z = nil
+
+    if zText ~= "n" then
+        z = tonumber(zText)
+        if z == nil then
+            return
+        end
+    end
+
+    if instanceID == nil or west == nil or north == nil then
+        return
+    end
+
+    entry.lastKnownWest = west
+    entry.lastKnownNorth = north
+    entry.lastKnownZ = z
+    entry.lastKnownInstance = instanceID
+
+    UpdateIncomingRingVisual(entry)
+end
+
 local function ProcessCommMessage(sender, message, simulated)
     if not sender or sender == "" or not message then
         return
@@ -942,6 +1039,29 @@ local function ProcessCommMessage(sender, message, simulated)
             else
                 DeactivateIncomingRing(sender)
             end
+        end
+        return
+    end
+
+    local _, _, requestedRinger = string.find(message, "^POSQ:(.+)$")
+    if requestedRinger then
+        if not simulated
+            and runtimeMode == "ringer"
+            and requestedRinger == playerName
+            and outgoingRings[sender]
+        then
+            SendPositionReply(sender)
+        end
+        return
+    end
+
+    local _, _, positionRecipient, mapText, westText, northText, zText = string.find(
+        message,
+        "^POS:([^:]+):([^:]+):([^:]+):([^:]+):([^:]+)$"
+    )
+    if positionRecipient then
+        if not simulated then
+            ApplyRemotePosition(sender, positionRecipient, mapText, westText, northText, zText)
         end
         return
     end
