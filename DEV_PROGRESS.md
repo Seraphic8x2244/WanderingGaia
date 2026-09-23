@@ -2,84 +2,68 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.1-dev`
-- Implementation head ready for in-game test: `dc758a92572f1c562a78fbf21971c6eaf215ddb0`
+- Version: `0.1.2-dev`
+- Implementation head ready for in-game test: `fb11dc26a599fa8cb2e075bcec22b43ee19673e3`
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `fb11dc26a599fa8cb2e075bcec22b43ee19673e3` - Bump WanderingGaia to 0.1.2-dev and persist tuning settings with `WanderingGaiaDB`.
+- `aad7fb62480eee8abaac772e8163f3a98450a191` - Add bell tuning controls, safe-area overlays, range sizing, optional smoothing/Z range, and coordinate diagnostics.
+- `d5b041e99871a5e6ca2f9a13393e70bad81ba4b6` - Add tuning/configuration locale strings.
+- `a14316e6776aaf640ef210bdf42b8aee1a60ea2f` - Record the 0.1.1 centre-anchor retest handoff.
 - `dc758a92572f1c562a78fbf21971c6eaf215ddb0` - Bump WanderingGaia to 0.1.1-dev after direct UI-centre anchor fix.
-- `82c479f0913e757464872b49ea3ff218dc4dc240` - Anchor bell directly to UIParent CENTER instead of reconstructing centre from BOTTOMLEFT coordinates.
-- `47d1823e593506349fab584a4bd5690a494430c7` - Earlier attempted screen-centre fix; runtime test showed the bell still orbiting an off-centre origin.
-- `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a` - Store bell runtime texture as uncompressed TGA.
-- `6a9743191248c5ed60a852da3dd5ded9a727df24` - Add uploaded bell runtime TGA to `artwork/`.
-- `0b793578eccb613a45fdf3350ab40e16efdf43e6` - Add local directional bell preview.
-- `b8c3f870cda6297eb70f904f65fffaabb651a196` - Add target preview locale strings.
-- `b16f92218b73f4f71fa7677dc9722297ccf6f0b3` - Plan local directional bell preview.
-- `00f5f001bee5b205496958a81cb26f12de1f9725` - Add 256x64 four-frame bell swing source artwork.
-- `4167d3afc2666ace134a100920505b30de6a5e12` - Document WanderingGaia initial development scope.
-- `1922a93a8787c5649f00938483e5e6cbbd860324` - Add artwork directory scaffold.
-- `0c178ae71615f061067126889204cccda48be070` - Add enUS locale scaffold.
-- `6c7154c794ceb635819f338d3b5437b98026cabf` - Add WanderingGaia main Lua file.
-- `f46ecee9cc7bcb58992ba46efbf173ac49f8992f` - Add WanderingGaia dev TOC.
-- `1c27d9e8abdb348c1b085627d2ae23f066dd2b5a` - Add development guide.
-- `6b205fda44adca61bc1dd4bd6b6ea2e3ed95d612` - Initialize repository README on `main` before creating `dev`.
+- `82c479f0913e757464872b49ea3ff218dc4dc240` - Anchor bell directly to UIParent CENTER.
 
 ## Completed / Verified
-- User runtime result: directional tracking works very well in-game.
-- Repository initialized.
-- `dev` branch created.
-- VanillaTemplate development structure copied and renamed for WanderingGaia.
-- Development contract copied from VanillaTemplate without project-specific changes.
-- Initial feature scope agreed and recorded below.
-- Four-frame bell swing artwork approved by the user and committed as `artwork/WanderingGaia_BellSwing_256x64.png`.
-- Runtime bell texture committed as `artwork/WanderingGaia_BellSwing_256x64.tga` and statically verified as TGA image type 2 (uncompressed true-colour), 256x64, 32-bit.
-- Runtime testing has begun; directional tracking is user-verified, while centre anchoring failed in `0.1.0-dev` and is corrected for retest in `0.1.1-dev`.
+- Repository initialized on `dev` for WoW 1.12.1 / Lua 5.0.
+- Four-frame bell artwork is committed as PNG source plus 256x64 32-bit uncompressed TGA runtime texture.
+- `0.1.1-dev` runtime result: user reports the direct-`UIParent CENTER` bell origin and DLL-provided direction behaviour work about as well as could reasonably be expected.
+- Directional movement/bearing is user-verified as working well while rotating around a target.
+- Bell swing animation timing remains `0.07` seconds per sprite step and was deliberately not made configurable.
 
 ## Implemented / Awaiting Test
-- Development scaffold:
-  - `WanderingGaia.toc`
-  - `WanderingGaia.lua`
-  - `locales/enUS.lua`
-  - `artwork/`
-  - `DEV_GUIDE.md`
-  - `DEV_PROGRESS.md`
-- Bell source sprite:
-  - 256x64 sheet;
-  - four 64x64 frames;
-  - progression is centre -> slight left -> further left -> full left;
-  - mirrored in-game for the opposite swing direction.
-- Local target-preview harness:
-  - `/wgtest`, `/wgtest on`, `/wgtest off`;
-  - uses ClassicAPI `GetPlayerFacing()` and the ClassicAPI four-return `UnitPosition()` shape;
-  - treats the local player as the recipient and current target as the remote player;
-  - calculates continuous 2D relative bearing and distance;
-  - applies the agreed left/right 20% and bottom 30% safe-area exclusions;
-  - uses the agreed non-linear distance curve and near-distance deadzone;
-  - animates the four-frame bell by mirroring the left-swing frames for the opposite half-cycle.
+- `0.1.2-dev` tuning workflow:
+  - `/wg test [on|off]` replaces the old standalone `/wgtest` command.
+  - `/wg config` opens a draggable tuning panel without implicitly enabling the preview.
+  - opening config shows translucent grey left/right/up/down exclusion overlays plus a centred near-range marker.
+  - left/right/up/down screen deadzones are editable percentages.
+  - five-point distance-to-outer-limit curve is editable; point 1 is the centre deadzone with radius fixed at 0%.
+  - curve preview visualises the currently applied points.
+  - near and far bell sizes are independently configurable; size interpolates using the same distance curve percentage.
+  - optional movement smoothing is configurable and defaults to 0%, preserving raw 0.1.1 behaviour.
+  - optional `Use Z for range` switches the distance curve from horizontal XY range to XYZ range when Z is available.
+  - Z is deliberately not projected onto screen direction because the documented ClassicAPI addon surface exposes world Z and player yaw but not the camera pitch/projection state needed for a correct screen-plane transform.
+  - settings persist in `WanderingGaiaDB`.
+  - Copy settings produces a selectable one-line `WGCFG` string for pasting back into development chat.
+- `/wg coords [on|off]` toggles live diagnostics showing player/target XYZ, deltas, 2D/3D range, selected range mode, facing/bearing/relative angle, curve percentage, bell size and screen offset.
+- Existing direction calculation, direct UI-centre anchoring and animation interval are preserved.
 
 ## Current Issues
-- Character names/identifiers for the two intended users have not yet been added to implementation.
-- Directional tracking is user-verified as working well in game.
-- Runtime test of `0.1.0-dev` at `1ac27ad` showed the bell orbiting around a visibly off-centre origin even though direction changed correctly.
-- `0.1.1-dev` now anchors the bell directly to `UIParent` `CENTER`; this specific correction is awaiting in-game confirmation.
-- Distance curve, safe-area edge limiting and swing animation still need explicit confirmation after the centre-anchor correction.
+- The entire `0.1.2-dev` config/diagnostic slice is statically checked but not yet user-tested in game.
+- Z can be used honestly for 3D range, but not for vertical screen-direction projection with the currently documented ClassicAPI Lua data.
+- Character names/identifiers for the eventual two-user ring feature are not implemented yet.
+- Real ring communication remains intentionally untouched until the local bell tuning baseline is settled.
 
 ## Testing
 
 ### Last Test
-- Version/commit: `0.1.0-dev` / `1ac27addfbe9a40f76989ce520025491f7d04f92`
-- Passed: directional movement/bearing behaved very well while rotating around the target.
-- Failed: the bell's orbit origin was visibly offset left from the screen centre.
-- Not fully confirmed: distance curve, safe-area edge limits and full swing animation.
+- Version/state: `0.1.1-dev`, after the direct `UIParent CENTER` anchor correction.
+- Passed: user reports centre/directional behaviour works about as well as expected from the DLL position data.
+- Passed: directional movement remains convincing in practical target/rotation testing.
+- Superseded issue: the earlier 0.1.0 off-centre orbit is fixed.
 
 ### Next Test
-- Focused centre-anchor retest on `0.1.1-dev` / `dc758a92572f1c562a78fbf21971c6eaf215ddb0`:
-  - update WanderingGaia through TocPilot and confirm the loaded addon reports `0.1.1-dev`;
-  - target the same nearby NPC used for the failed `0.1.0-dev` test;
-  - rotate in place and confirm the bell's circular/orbital movement is centred on the actual visual centre of the UI, not offset left;
-  - if the API-reported distance falls inside the <=2 yard deadzone, confirm the bell lands exactly at UI centre;
-  - confirm directional movement itself remains unchanged;
-  - report the result before changing distance or safe-area behaviour.
+- Update through TocPilot to `0.1.2-dev` / implementation head `fb11dc26a599fa8cb2e075bcec22b43ee19673e3`.
+- Confirm `/wg test on` still gives the same direction/centre feel as the verified 0.1.1 baseline.
+- Run `/wg config`:
+  - confirm the panel opens and the grey left/right/up/down overlays match the configured percentages;
+  - Apply an obvious edge-deadzone change and verify the overlay and bell travel limit move together;
+  - alter one curve point and verify the bell radius changes accordingly, then restore/tune it;
+  - try different near/far sizes and confirm bell size changes with range;
+  - leave smoothing at 0 first, then optionally try a moderate value to judge whether it improves DLL jitter without making movement laggy;
+  - toggle Use Z for range somewhere with a meaningful height difference and compare the radial-distance feel; screen direction should remain based on horizontal bearing.
+- Run `/wg coords` and verify the live values look plausible while moving/turning and targeting.
+- Use Copy settings and paste the resulting `WGCFG` line back into chat so the tuned values can become the default install settings.
 
 ## Planned / To-do
 
@@ -138,4 +122,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Update through TocPilot to `0.1.1-dev` / implementation head `dc758a92572f1c562a78fbf21971c6eaf215ddb0`, then repeat the same nearby-NPC `/wgtest on` rotation test that exposed the off-centre orbit. Confirm that the orbit is now centred on the true UI centre and that direction remains correct. Do not change distance, safe-area or communication behaviour until this centre-anchor retest is reported.
+Update through TocPilot to `0.1.2-dev` / `fb11dc26a599fa8cb2e075bcec22b43ee19673e3`. First confirm `/wg test on` preserves the verified 0.1.1 direction/centre behaviour. Then open `/wg config`, visually verify the grey deadzone overlays, tune edge exclusions / distance curve / near-far size / optional smoothing / optional Z range, check `/wg coords`, and paste the Copy settings `WGCFG` line back into chat. Use that runtime result to set the good baseline defaults before implementing real ring communication.
