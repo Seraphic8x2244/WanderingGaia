@@ -2,12 +2,16 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.6-dev`
-- Current implementation head before default-profile update: `21fdb0a1b583856a881603df1d70fc8c4fae07ed`.
-- Active change: promote the user-tested WGCFG profile to install defaults with Outer Up corrected to 60, and deliberately reset existing saved tuning once on upgrade.
+- Version: `0.1.7-dev`
+- Current implementation head ready for in-game test: `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`.
+- Current defaults: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
+- Settings revision `2` intentionally resets pre-0.1.7 saved tuning once, then normal persistence resumes.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d` - Bump WanderingGaia to 0.1.7-dev.
+- `cb0da7e071dc48415b305097e541df9c5d7f5b12` - Set the tested tuning profile as defaults and add the one-time settings revision reset.
+- `f42d1c08a29012c44d0332f3d234c781c0b72f8d` - Record the final tuning defaults and reset request before implementation.
 - `21fdb0a1b583856a881603df1d70fc8c4fae07ed` - Bump WanderingGaia to 0.1.6-dev.
 - `6d7edff9f2e9343c2aac7d5b82a922ce3314fce4` - Remove physical-screen and outer-vs-inner placement guardrails.
 - `9291456eec4bf50315d1e0d15f168cb823cc3742` - Remove arbitrary tuning value caps from normalization.
@@ -40,7 +44,7 @@
 - `0.1.4-dev` first ellipse test: user reports the ellipse geometry removes the previous jitter and already feels intuitive.
 
 ## Implemented / Awaiting Test
-- `0.1.6-dev` asymmetric outer ellipse tuning model:
+- `0.1.7-dev` asymmetric outer ellipse tuning model:
   - `Origin X (%)` / `Origin Y (%)` move the visual player-origin relative to true UI centre.
   - `Inner X/Y` are ellipse radii as percentages of screen width/height and define the character exclusion zone.
   - `Outer X` is the shared left/right radius; `Outer Up` and `Outer Down` independently define the upper/lower vertical travel radii.
@@ -55,12 +59,14 @@
   - settings persist in `WanderingGaiaDB`.
   - Existing `outerRadiusY` SavedVariables migrate into both Up and Down on first load, preserving current tuning.
   - User-entered tuning values are no longer arbitrarily capped or silently reshaped; extreme values are preserved. Only the rendered bell size retains a positive floor because WoW frame dimensions must remain positive.
+  - The user-tested profile is now the install/reset default: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
+  - `SETTINGS_REVISION = 2` wipes older saved tuning once on first 0.1.7 load, writes these defaults, and records the revision so later reloads preserve user changes normally.
   - Copy settings exports `WGCFG` with `outer=X:up:down` plus origin, inner ellipse, curve, size and smoothing values.
 - `/wg coords [on|off]` reports XYZ positions/deltas, 2D/3D range and active range mode, bearing/facing, ellipse settings, curve percentage, bell size and final screen offset.
 - `/wg test [on|off]` remains the local target preview path.
 
 ## Current Issues
-- `0.1.6-dev` uncapped tuning behaviour is statically inspected but not yet tested in WoW.
+- `0.1.7-dev` default-profile/reset behaviour is statically checked but not yet verified in WoW.
 - `0.1.3-dev` movable-origin testing was superseded by the requested ellipse model before a focused result was recorded.
 - Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
@@ -78,12 +84,11 @@
 - New tuning requirement: inner ellipse can stay symmetric; outer X can stay symmetric left/right; outer Up and Down must be independently tunable.
 
 ### Next Test
-- Update through TocPilot to `0.1.6-dev` / `21fdb0a1b583856a881603df1d70fc8c4fae07ed`.
-- Tune Origin Y, Inner X/Y, Outer X, Outer Up and Outer Down.
-- Run `/wg test on` across bearings, ranges and height differences.
-- Confirm the bell remains outside the inner ellipse, follows the asymmetric outer boundary cleanly, normally reports 3D range, and retains natural range-based sizing.
-- Use Copy settings and paste the resulting `WGCFG` line back into chat so the tuned values can become install defaults.
-- Static verification completed: no stale runtime/config references to the old single `outerRadiusY`; arbitrary normalization caps, physical-screen placement clamp and outer-vs-inner auto-correction are removed; no GitHub Actions/CI workflow exists in this repository.
+- Update through TocPilot to `0.1.7-dev` / `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`.
+- On first load, confirm the previous saved tuning has been replaced by the new defaults, including `Outer Up = 60`.
+- Change one value, reload/restart again, and confirm the settings revision does not reset a second time.
+- Run `/wg test on` briefly to confirm the promoted defaults retain the expected ellipse feel, 3D range and range-based bell sizing.
+- Static verification passed for all supplied default values and the one-time reset/preserve branches; no GitHub Actions/CI workflow exists in this repository.
 
 ## Planned / To-do
 
@@ -135,4 +140,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Set the supplied tuning profile as `DEFAULT_SETTINGS` with Outer Up = 60. Add a one-time settings revision reset that replaces existing `WanderingGaiaDB` contents with defaults on upgrade, then persists normally afterward. Bump the dev version, static-check the reset/default paths, and hand back the new runtime commit for verification.
+User-test `0.1.7-dev` / `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`: confirm first load wipes the old tuning and loads the exact promoted defaults with Outer Up = 60; then change one setting and restart once more to confirm revision 2 preserves subsequent changes rather than resetting again.
