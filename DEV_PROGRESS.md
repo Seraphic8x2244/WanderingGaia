@@ -129,6 +129,21 @@
 - Existing independent per-recipient ring state remains intact.
 - Existing recipient cancellation semantics are unchanged: already targeting the ringer when `RING:1` arrives does not suppress the ring; only a later `PLAYER_TARGET_CHANGED` onto that ringer cancels it.
 
+### On-demand remote position refresh
+- Extend `0.1.9-dev` with optional backward-compatible position messages:
+  - `POSQ:<ringer>` — an actively rung client requests the named ringer's current player position.
+  - `POS:<recipient>:<map>:<west>:<north>:<z-or-n>` — the requested ringer replies group-wide; only the named recipient consumes it, and `arg4` remains the authoritative ringer identity.
+- Receiver behavior:
+  - continue using local `UnitPosition(ringer)` whenever available;
+  - on the first local-position failure for an active ring, request immediately;
+  - while local position remains unavailable, send at most one request per second per active ringer;
+  - use the most recent local/remote position as the cached endpoint between replies;
+  - stop requesting immediately when local `UnitPosition(ringer)` works again or the ring ends.
+- Ringer behavior:
+  - respond only when the requested ringer name equals `UnitName("player")`, requester is a real grouped sender, and local `UnitPosition("player")` is available;
+  - response identifies the requester as recipient so multiple simultaneous rings remain independent.
+- `0.1.8` and earlier clients ignore the unknown `POSQ`/`POS` messages and keep their existing behavior.
+
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
 - Real two-client/cross-client validation until after the surprise is delivered or a safe unrelated second client becomes available.
@@ -136,13 +151,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-User-test `0.1.9-dev` with the real two-client setup before touching `main`:
-1. Confirm no Lua errors after reload.
-2. In ringer mode, target Gaia and confirm the sender bell is now above centre by the mirrored 10% default offset.
-3. Left click: Gaia should ring and the sender bell should animate.
-4. Left click again inside ~3.14s: no new ring sound/message effect should occur; after ~3.14s, left click should re-ring and replay the recipient sound while remaining active.
-5. Right click: recipient ring should stop immediately and the sender bell should become static.
-6. Ring while both characters are close enough for live direction, then move the ringer far enough that `UnitPosition` drops out. Gaia's bell should remain at the outer ellipse and continue changing screen direction as Gaia turns/moves, using the ringer's last known world position instead of snapping to centre.
-7. Return into positional visibility and confirm the bell resumes live direction/distance automatically.
-8. Recheck the already-targeting-ringer case: a new ring must still appear; cancellation requires targeting away and then back onto the ringer.
-Do not promote to stable until these behaviors are user-verified.
+Implement the optional on-demand position refresh on `0.1.9-dev`: local `UnitPosition(ringer)` stays primary; first failure sends `POSQ` immediately and continued failure requests at most once per second; the ringer replies with its own current world position; the recipient updates the active ring's cached endpoint and continues live local-player/facing projection between replies. Preserve all current sender-control refinements, Vanilla communication APIs, independent per-recipient state, and backward compatibility. Then statically verify parser/security/API behavior and hand off a real two-client test plan before touching `main`.
