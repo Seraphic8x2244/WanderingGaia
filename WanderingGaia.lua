@@ -6,6 +6,8 @@ local PI = math.pi
 local TWO_PI = PI * 2
 
 local BELL_TEXTURE = "Interface\\AddOns\\WanderingGaia\\artwork\\WanderingGaia_BellSwing_256x64"
+local BELL_SOUND = "Interface\\AddOns\\WanderingGaia\\artwork\\gaiasbell.wav"
+local COMM_PREFIX = "WanderingGaia"
 local POSITION_INTERVAL = 0.05
 local COORDS_INTERVAL = 0.10
 local ANIMATION_INTERVAL = 0.07
@@ -60,6 +62,16 @@ local curveMarkers = {}
 local settingsExportBox = nil
 local configStatus = nil
 local deadzoneOverlays = {}
+
+local runtimeMode = "client"
+local knownClients = {}
+local outgoingRings = {}
+local incomingRings = {}
+local debugClients = {}
+local debugUnitOverrides = {}
+local controlButton = nil
+local controlTexture = nil
+local ToggleOutgoingRing
 
 local ApplyConfigFields
 local ResetConfigDefaults
@@ -206,15 +218,19 @@ local function NormalizeAngle(angle)
     return angle
 end
 
-local function SetBellSprite(frameIndex, mirrored)
+local function SetBellSpriteTexture(texture, frameIndex, mirrored)
     local left = (frameIndex - 1) * 0.25
     local right = frameIndex * 0.25
 
     if mirrored then
-        bellTexture:SetTexCoord(right, left, 0, 1)
+        texture:SetTexCoord(right, left, 0, 1)
     else
-        bellTexture:SetTexCoord(left, right, 0, 1)
+        texture:SetTexCoord(left, right, 0, 1)
     end
+end
+
+local function SetBellSprite(frameIndex, mirrored)
+    SetBellSpriteTexture(bellTexture, frameIndex, mirrored)
 end
 
 local function Interpolate(distance, distanceA, radiusA, distanceB, radiusB)
@@ -301,7 +317,8 @@ local function HasDirectionalAPI()
     return true
 end
 
-local function UpdateGeometry()
+local function UpdateGeometry(unit)
+    unit = unit or "target"
     local playerWest, playerNorth, playerZ, playerInstance = GetClassicAPIPosition("player")
     local facing = nil
 
@@ -324,11 +341,11 @@ local function UpdateGeometry()
     geometry.playerInstance = playerInstance
     geometry.facing = facing
 
-    if not UnitExists("target") then
+    if not UnitExists(unit) then
         return false
     end
 
-    local targetWest, targetNorth, targetZ, targetInstance = GetClassicAPIPosition("target")
+    local targetWest, targetNorth, targetZ, targetInstance = GetClassicAPIPosition(unit)
     if targetWest == nil or targetNorth == nil or targetInstance == nil or targetInstance ~= playerInstance then
         return false
     end
@@ -377,8 +394,8 @@ local function UpdateGeometry()
     return true
 end
 
-local function ComputePlacement(applySmoothing)
-    if not UpdateGeometry() then
+local function ComputePlacementForUnit(unit, applySmoothing, smoothingState)
+    if not UpdateGeometry(unit) then
         return false
     end
 
@@ -442,32 +459,58 @@ local function ComputePlacement(applySmoothing)
     geometry.rawOffsetY = rawY
 
     if applySmoothing and settings.smoothing > 0 then
-        if not hasSmoothedPosition then
-            smoothedX = rawX
-            smoothedY = rawY
-            hasSmoothedPosition = true
-        else
-            local alpha = 1 - (settings.smoothing / 100)
-            smoothedX = smoothedX + ((rawX - smoothedX) * alpha)
-            smoothedY = smoothedY + ((rawY - smoothedY) * alpha)
-        end
+        local alpha = 1 - (settings.smoothing / 100)
 
-        geometry.offsetX = smoothedX
-        geometry.offsetY = smoothedY
+        if smoothingState then
+            if not smoothingState.hasSmoothedPosition then
+                smoothingState.smoothedX = rawX
+                smoothingState.smoothedY = rawY
+                smoothingState.hasSmoothedPosition = true
+            else
+                smoothingState.smoothedX = smoothingState.smoothedX + ((rawX - smoothingState.smoothedX) * alpha)
+                smoothingState.smoothedY = smoothingState.smoothedY + ((rawY - smoothingState.smoothedY) * alpha)
+            end
+
+            geometry.offsetX = smoothingState.smoothedX
+            geometry.offsetY = smoothingState.smoothedY
+        else
+            if not hasSmoothedPosition then
+                smoothedX = rawX
+                smoothedY = rawY
+                hasSmoothedPosition = true
+            else
+                smoothedX = smoothedX + ((rawX - smoothedX) * alpha)
+                smoothedY = smoothedY + ((rawY - smoothedY) * alpha)
+            end
+
+            geometry.offsetX = smoothedX
+            geometry.offsetY = smoothedY
+        end
     else
         geometry.offsetX = rawX
         geometry.offsetY = rawY
 
         if applySmoothing then
-            smoothedX = rawX
-            smoothedY = rawY
-            hasSmoothedPosition = true
+            if smoothingState then
+                smoothingState.smoothedX = rawX
+                smoothingState.smoothedY = rawY
+                smoothingState.hasSmoothedPosition = true
+            else
+                smoothedX = rawX
+                smoothedY = rawY
+                hasSmoothedPosition = true
+            end
         end
     end
 
     return true
 end
 
+
+
+local function ComputePlacement(applySmoothing)
+    return ComputePlacementForUnit("target", applySmoothing, nil)
+end
 local function PlaceBellForTarget()
     if not testEnabled then
         bell:Hide()
@@ -511,6 +554,426 @@ local function SetTestEnabled(enabled)
         PrintMessage(L.TEST_DISABLED)
     end
 end
+
+local function CommChannel()
+    if GetNumRaidMembers() > 0 then
+        return "RAID"
+    end
+
+    if GetNumPartyMembers() > 0 then
+        return "PARTY"
+    end
+
+    return nil
+end
+
+local function GroupUnitForName(name)
+    if not name or name == "" then
+        return nil
+    end
+
+    if UnitName("player") == name then
+        return "player"
+    end
+
+    local i
+    local unit
+
+    if GetNumRaidMembers() > 0 then
+        for i = 1, GetNumRaidMembers() do
+            unit = "raid" .. i
+            if UnitExists(unit) and UnitName(unit) == name then
+                return unit
+            end
+        end
+    else
+        for i = 1, GetNumPartyMembers() do
+            unit = "party" .. i
+            if UnitExists(unit) and UnitName(unit) == name then
+                return unit
+            end
+        end
+    end
+
+    return nil
+end
+
+local function SendComm(message)
+    local channel = CommChannel()
+
+    if not channel or type(SendAddonMessage) ~= "function" then
+        return false
+    end
+
+    SendAddonMessage(COMM_PREFIX, message, channel)
+    return true
+end
+
+local function ResolveIncomingUnit(sender)
+    local override = debugUnitOverrides[sender]
+
+    if override then
+        if UnitExists(override) and UnitName(override) == sender then
+            return override
+        end
+
+        return nil
+    end
+
+    return GroupUnitForName(sender)
+end
+
+local function CreateIncomingRing(sender)
+    local entry = incomingRings[sender]
+
+    if entry then
+        return entry
+    end
+
+    local frame = CreateFrame("Frame", nil, UIParent)
+    frame:SetWidth(DEFAULT_SETTINGS.nearSize)
+    frame:SetHeight(DEFAULT_SETTINGS.nearSize)
+    frame:SetFrameStrata("HIGH")
+    frame:Hide()
+
+    local texture = frame:CreateTexture(nil, "ARTWORK")
+    texture:SetAllPoints(frame)
+    texture:SetTexture(BELL_TEXTURE)
+    SetBellSpriteTexture(texture, 1, false)
+
+    entry = {
+        sender = sender,
+        frame = frame,
+        texture = texture,
+        active = false,
+        hasSmoothedPosition = false,
+        smoothedX = 0,
+        smoothedY = 0,
+    }
+
+    incomingRings[sender] = entry
+    return entry
+end
+
+local function UpdateIncomingRingVisual(entry)
+    if not entry or not entry.active then
+        return
+    end
+
+    local unit = ResolveIncomingUnit(entry.sender)
+
+    if unit and HasDirectionalAPI() and ComputePlacementForUnit(unit, true, entry) then
+        entry.frame:SetWidth(geometry.bellSize)
+        entry.frame:SetHeight(geometry.bellSize)
+        entry.frame:ClearAllPoints()
+        entry.frame:SetPoint("CENTER", UIParent, "CENTER", geometry.offsetX, geometry.offsetY)
+    else
+        local width = UIParent:GetWidth() or 0
+        local height = UIParent:GetHeight() or 0
+        local bellSize = math.max(1, settings.nearSize)
+        local offsetX = width * (settings.originX / 100)
+        local offsetY = height * (settings.originY / 100)
+
+        entry.hasSmoothedPosition = false
+        entry.frame:SetWidth(bellSize)
+        entry.frame:SetHeight(bellSize)
+        entry.frame:ClearAllPoints()
+        entry.frame:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
+    end
+
+    entry.frame:Show()
+end
+
+local function ActivateIncomingRing(sender)
+    local entry = CreateIncomingRing(sender)
+
+    entry.active = true
+    entry.hasSmoothedPosition = false
+    SetBellSpriteTexture(entry.texture, 1, false)
+
+    if type(PlaySoundFile) == "function" then
+        PlaySoundFile(BELL_SOUND)
+    end
+
+    UpdateIncomingRingVisual(entry)
+end
+
+local function DeactivateIncomingRing(sender)
+    local entry = incomingRings[sender]
+
+    if not entry then
+        return
+    end
+
+    entry.active = false
+    entry.hasSmoothedPosition = false
+    entry.frame:Hide()
+end
+
+local function HasActiveIncomingRings()
+    local sender, entry
+
+    for sender, entry in pairs(incomingRings) do
+        if entry.active then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function UpdateIncomingRings()
+    local sender, entry
+
+    for sender, entry in pairs(incomingRings) do
+        if entry.active then
+            UpdateIncomingRingVisual(entry)
+        end
+    end
+end
+
+local function AnimateIncomingRings(frameIndex, mirrored)
+    local sender, entry
+
+    for sender, entry in pairs(incomingRings) do
+        if entry.active then
+            SetBellSpriteTexture(entry.texture, frameIndex, mirrored)
+        end
+    end
+end
+
+local function CreateControlButton()
+    if controlButton then
+        return
+    end
+
+    controlButton = CreateFrame("Button", "WanderingGaiaRingControl", UIParent)
+    controlButton:SetWidth(42)
+    controlButton:SetHeight(42)
+    controlButton:SetPoint("CENTER", UIParent, "CENTER", 0, -145)
+    controlButton:SetFrameStrata("DIALOG")
+
+    controlTexture = controlButton:CreateTexture(nil, "ARTWORK")
+    controlTexture:SetAllPoints(controlButton)
+    controlTexture:SetTexture(BELL_TEXTURE)
+    SetBellSpriteTexture(controlTexture, 1, false)
+
+    controlButton:SetScript("OnClick", function()
+        if ToggleOutgoingRing then
+            ToggleOutgoingRing()
+        end
+    end)
+
+    controlButton:Hide()
+end
+
+local function UpdateControlButton()
+    CreateControlButton()
+
+    if runtimeMode ~= "ringer" or not UnitExists("target") then
+        controlButton:Hide()
+        return
+    end
+
+    local targetName = UnitName("target")
+
+    if not targetName or not knownClients[targetName] then
+        controlButton:Hide()
+        return
+    end
+
+    if outgoingRings[targetName] then
+        controlButton:SetAlpha(1.0)
+    else
+        controlButton:SetAlpha(0.70)
+    end
+
+    controlButton:Show()
+end
+
+local function ProcessCommMessage(sender, message, simulated)
+    if not sender or sender == "" or not message then
+        return
+    end
+
+    local playerName = UnitName("player")
+
+    if not simulated then
+        if sender == playerName or not GroupUnitForName(sender) then
+            return
+        end
+    end
+
+    if message == "Q" then
+        if runtimeMode == "client" and not simulated then
+            SendComm("MODE:C")
+        end
+        return
+    end
+
+    if message == "MODE:C" then
+        if runtimeMode == "ringer" then
+            knownClients[sender] = true
+            UpdateControlButton()
+        end
+        return
+    end
+
+    if message == "MODE:R" then
+        knownClients[sender] = nil
+        outgoingRings[sender] = nil
+        UpdateControlButton()
+        return
+    end
+
+    local _, _, ringState, recipient = string.find(message, "^RING:([01]):(.+)$")
+    if ringState and recipient then
+        if runtimeMode == "client" and recipient == playerName then
+            if ringState == "1" then
+                ActivateIncomingRing(sender)
+            else
+                DeactivateIncomingRing(sender)
+            end
+        end
+        return
+    end
+
+    local _, _, intendedRinger = string.find(message, "^CANCEL:(.+)$")
+    if intendedRinger and runtimeMode == "ringer" and intendedRinger == playerName then
+        outgoingRings[sender] = nil
+        UpdateControlButton()
+    end
+end
+
+ToggleOutgoingRing = function()
+    if runtimeMode ~= "ringer" or not UnitExists("target") then
+        return
+    end
+
+    local targetName = UnitName("target")
+
+    if not targetName or not knownClients[targetName] then
+        return
+    end
+
+    if outgoingRings[targetName] then
+        outgoingRings[targetName] = nil
+        SendComm("RING:0:" .. targetName)
+    else
+        outgoingRings[targetName] = true
+        SendComm("RING:1:" .. targetName)
+    end
+
+    UpdateControlButton()
+end
+
+local function ClearIncomingRings(sendCancellation)
+    local sender, entry
+
+    for sender, entry in pairs(incomingRings) do
+        if entry.active then
+            if sendCancellation then
+                SendComm("CANCEL:" .. sender)
+            end
+
+            DeactivateIncomingRing(sender)
+        end
+    end
+end
+
+local function SetRuntimeMode(mode)
+    if mode ~= "client" and mode ~= "ringer" then
+        return
+    end
+
+    if runtimeMode == mode then
+        if mode == "ringer" then
+            SendComm("Q")
+            PrintMessage(L.MODE_RINGER)
+        else
+            SendComm("MODE:C")
+            PrintMessage(L.MODE_CLIENT)
+        end
+
+        UpdateControlButton()
+        return
+    end
+
+    if runtimeMode == "ringer" then
+        local recipient, active
+
+        for recipient, active in pairs(outgoingRings) do
+            if active then
+                SendComm("RING:0:" .. recipient)
+            end
+        end
+
+        outgoingRings = {}
+        knownClients = {}
+    else
+        ClearIncomingRings(true)
+    end
+
+    runtimeMode = mode
+
+    if mode == "ringer" then
+        SendComm("MODE:R")
+        SendComm("Q")
+        PrintMessage(L.MODE_RINGER)
+    else
+        SendComm("MODE:C")
+        PrintMessage(L.MODE_CLIENT)
+    end
+
+    UpdateControlButton()
+end
+
+local function RefreshGroupState()
+    local name, active
+    local sender, entry
+
+    for name, active in pairs(knownClients) do
+        if not debugClients[name] and not GroupUnitForName(name) then
+            knownClients[name] = nil
+            outgoingRings[name] = nil
+        end
+    end
+
+    for name, active in pairs(outgoingRings) do
+        if not debugClients[name] and not GroupUnitForName(name) then
+            outgoingRings[name] = nil
+        end
+    end
+
+    for sender, entry in pairs(incomingRings) do
+        if entry.active and not debugUnitOverrides[sender] and not GroupUnitForName(sender) then
+            DeactivateIncomingRing(sender)
+        end
+    end
+
+    if runtimeMode == "ringer" then
+        SendComm("Q")
+    else
+        SendComm("MODE:C")
+    end
+
+    UpdateControlButton()
+end
+
+local function CancelIncomingRingForTarget()
+    if runtimeMode ~= "client" or not UnitExists("target") then
+        return
+    end
+
+    local targetName = UnitName("target")
+    local entry = targetName and incomingRings[targetName]
+
+    if entry and entry.active then
+        DeactivateIncomingRing(targetName)
+        SendComm("CANCEL:" .. targetName)
+    end
+end
+
 
 local function EnsureDeadzoneOverlays()
     if deadzoneOverlays.frame then
@@ -1204,28 +1667,156 @@ local function ParseCommand(message)
     return string.lower(command or ""), string.lower(remainder or "")
 end
 
+local function DebugActiveIncomingCount()
+    local count = 0
+    local sender, entry
+
+    for sender, entry in pairs(incomingRings) do
+        if entry.active then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
+local function DebugState()
+    local targetName = "-"
+    local known = "no"
+    local outgoing = "no"
+
+    if UnitExists("target") and UnitName("target") then
+        targetName = UnitName("target")
+
+        if knownClients[targetName] then
+            known = "yes"
+        end
+
+        if outgoingRings[targetName] then
+            outgoing = "yes"
+        end
+    end
+
+    PrintMessage(string.format(
+        L.DEBUG_STATE,
+        runtimeMode,
+        targetName,
+        known,
+        outgoing,
+        DebugActiveIncomingCount()
+    ))
+end
+
+local function DebugClear()
+    local name, active
+    local sender, entry
+
+    for name, active in pairs(debugClients) do
+        knownClients[name] = nil
+        outgoingRings[name] = nil
+    end
+
+    for sender, entry in pairs(incomingRings) do
+        if debugUnitOverrides[sender] then
+            DeactivateIncomingRing(sender)
+        end
+    end
+
+    debugClients = {}
+    debugUnitOverrides = {}
+    UpdateControlButton()
+    PrintMessage(L.DEBUG_CLEARED)
+end
+
+local function HandleDebugCommand(remainder)
+    local command = string.lower(remainder or "")
+
+    if command == "discover" then
+        if runtimeMode ~= "ringer" then
+            PrintMessage(L.DEBUG_NEEDS_RINGER)
+            return
+        end
+
+        if not UnitExists("target") or not UnitName("target") then
+            PrintMessage(L.DEBUG_NEEDS_TARGET)
+            return
+        end
+
+        local targetName = UnitName("target")
+        debugClients[targetName] = true
+        ProcessCommMessage(targetName, "MODE:C", true)
+        PrintMessage(string.format(L.DEBUG_DISCOVERED, targetName))
+    elseif command == "ring" then
+        if runtimeMode ~= "client" then
+            PrintMessage(L.DEBUG_NEEDS_CLIENT)
+            return
+        end
+
+        if not UnitExists("target") or not UnitName("target") then
+            PrintMessage(L.DEBUG_NEEDS_TARGET)
+            return
+        end
+
+        local sender = UnitName("target")
+        debugUnitOverrides[sender] = "target"
+        ProcessCommMessage(sender, "RING:1:" .. (UnitName("player") or ""), true)
+        PrintMessage(string.format(L.DEBUG_RING_STARTED, sender))
+    elseif command == "off" then
+        if not UnitExists("target") or not UnitName("target") then
+            PrintMessage(L.DEBUG_NEEDS_TARGET)
+            return
+        end
+
+        local sender = UnitName("target")
+        ProcessCommMessage(sender, "RING:0:" .. (UnitName("player") or ""), true)
+        PrintMessage(string.format(L.DEBUG_RING_STOPPED, sender))
+    elseif command == "clear" then
+        DebugClear()
+    elseif command == "state" then
+        DebugState()
+    else
+        PrintMessage(L.DEBUG_HELP)
+    end
+end
+
 local driver = CreateFrame("Frame")
 driver:SetScript("OnUpdate", function()
-    if not testEnabled and not coordsEnabled then
+    local incomingActive = HasActiveIncomingRings()
+
+    if not testEnabled and not coordsEnabled and not incomingActive then
         return
     end
 
     positionElapsed = positionElapsed + arg1
     coordsElapsed = coordsElapsed + arg1
 
-    if testEnabled then
+    if testEnabled or incomingActive then
         animationElapsed = animationElapsed + arg1
 
         if positionElapsed >= POSITION_INTERVAL then
             positionElapsed = 0
-            PlaceBellForTarget()
+
+            if testEnabled then
+                PlaceBellForTarget()
+            end
+
+            if incomingActive then
+                UpdateIncomingRings()
+            end
         end
 
         if animationElapsed >= ANIMATION_INTERVAL then
             animationElapsed = 0
 
             local frame = swingFrames[animationIndex]
-            SetBellSprite(frame[1], frame[2])
+
+            if testEnabled then
+                SetBellSprite(frame[1], frame[2])
+            end
+
+            if incomingActive then
+                AnimateIncomingRings(frame[1], frame[2])
+            end
 
             animationIndex = animationIndex + 1
             if animationIndex > table.getn(swingFrames) then
@@ -1242,13 +1833,30 @@ end)
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
+events:RegisterEvent("CHAT_MSG_ADDON")
+events:RegisterEvent("PLAYER_TARGET_CHANGED")
+events:RegisterEvent("PARTY_MEMBERS_CHANGED")
+events:RegisterEvent("RAID_ROSTER_UPDATE")
+events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:SetScript("OnEvent", function()
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
         InitializeSettings()
+        CreateControlButton()
 
         if configFrame then
             RefreshConfigFields()
         end
+
+        RefreshGroupState()
+    elseif event == "CHAT_MSG_ADDON" then
+        if arg1 == COMM_PREFIX then
+            ProcessCommMessage(arg4, arg2, false)
+        end
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        CancelIncomingRingForTarget()
+        UpdateControlButton()
+    elseif event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
+        RefreshGroupState()
     end
 end)
 
@@ -1266,6 +1874,12 @@ SlashCmdList["WANDERINGGAIA"] = function(message)
         else
             PrintMessage(L.TEST_HELP)
         end
+    elseif command == "ringer" then
+        SetRuntimeMode("ringer")
+    elseif command == "client" then
+        SetRuntimeMode("client")
+    elseif command == "debug" then
+        HandleDebugCommand(remainder)
     elseif command == "config" then
         if remainder == "" then
             ToggleConfig()
