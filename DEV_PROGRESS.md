@@ -9,6 +9,7 @@
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `cd5ade125958b6611d61ca10ddf6fdda0e4e2b9b` - Record the 0.1.7 default-reset test handoff.
 - `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d` - Bump WanderingGaia to 0.1.7-dev.
 - `cb0da7e071dc48415b305097e541df9c5d7f5b12` - Set the tested tuning profile as defaults and add the one-time settings revision reset.
 - `f42d1c08a29012c44d0332f3d234c781c0b72f8d` - Record the final tuning defaults and reset request before implementation.
@@ -57,17 +58,15 @@
   - smoothing remains configurable and defaults to 0%.
   - animation timing remains fixed at `0.07` seconds per sprite step.
   - settings persist in `WanderingGaiaDB`.
-  - Existing `outerRadiusY` SavedVariables migrate into both Up and Down on first load, preserving current tuning.
   - User-entered tuning values are no longer arbitrarily capped or silently reshaped; extreme values are preserved. Only the rendered bell size retains a positive floor because WoW frame dimensions must remain positive.
   - The user-tested profile is now the install/reset default: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
-  - `SETTINGS_REVISION = 2` wipes older saved tuning once on first 0.1.7 load, writes these defaults, and records the revision so later reloads preserve user changes normally.
+  - `SETTINGS_REVISION = 2` deliberately discards all older saved tuning once on first 0.1.7 load, writes these defaults, and records the revision so later reloads preserve user changes normally.
   - Copy settings exports `WGCFG` with `outer=X:up:down` plus origin, inner ellipse, curve, size and smoothing values.
 - `/wg coords [on|off]` reports XYZ positions/deltas, 2D/3D range and active range mode, bearing/facing, ellipse settings, curve percentage, bell size and final screen offset.
 - `/wg test [on|off]` remains the local target preview path.
 
 ## Current Issues
 - `0.1.7-dev` default-profile/reset behaviour is statically checked but not yet verified in WoW.
-- `0.1.3-dev` movable-origin testing was superseded by the requested ellipse model before a focused result was recorded.
 - Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
 - Real ring communication remains intentionally untouched until the local bell tuning baseline is settled.
@@ -75,13 +74,9 @@
 ## Testing
 
 ### Last Test
-- User supplied final tuning candidate: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
-- Requested next update behaviour: these values become defaults and existing saved tuning is wiped once so the new defaults actually load.
-
-### Previous Test
-- Version/state: `0.1.4-dev` / implementation baseline `49446d640b9bf658e98e08789919e3d2c166774f`.
-- Passed so far: user reports the ellipse model removes the previous jitter and feels intuitive immediately.
-- New tuning requirement: inner ellipse can stay symmetric; outer X can stay symmetric left/right; outer Up and Down must be independently tunable.
+- `0.1.4-dev` ellipse geometry was user-tested positively: the ellipse model removed the previous jitter and felt intuitive.
+- User then tuned and supplied the final profile: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
+- `0.1.7-dev` promotes that profile to defaults and intentionally wipes older saved tuning once so those defaults actually load.
 
 ### Next Test
 - Update through TocPilot to `0.1.7-dev` / `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`.
@@ -140,4 +135,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-User-test `0.1.7-dev` / `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`: confirm first load wipes the old tuning and loads the exact promoted defaults with Outer Up = 60; then change one setting and restart once more to confirm revision 2 preserves subsequent changes rather than resetting again.
+User-test `0.1.7-dev` / implementation commit `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d`: confirm first load wipes the old tuning and loads the exact promoted defaults with Outer Up = 60; then change one setting and restart once more to confirm revision 2 preserves subsequent changes rather than resetting again. If that passes, continue bell feature work from the planned Ring Bell section rather than retuning geometry further unless a real issue appears.
