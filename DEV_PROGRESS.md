@@ -2,12 +2,16 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.3-dev`
-- Latest implementation baseline before ellipse work: `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`
-- Active work: replace rectangular screen deadzones with inner/outer ellipses, keep the distance curve, make 3D XYZ range mandatory, and preserve range-based bell sizing.
+- Version: `0.1.4-dev`
+- Implementation head ready for in-game test: `49446d640b9bf658e98e08789919e3d2c166774f`
+- Current tuning model: configurable player-origin + inner character-exclusion ellipse + outer travel ellipse + distance curve + range-based bell size.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `49446d640b9bf658e98e08789919e3d2c166774f` - Bump WanderingGaia to 0.1.4-dev after ellipse geometry implementation.
+- `4a1cec0ee602b27cefcd7230b071e306422e623d` - Replace rectangular bell limits with inner/outer ellipse geometry; make XYZ range automatic; preserve range-based size and curve.
+- `84bef8dea24c0526c7586fd70a78c47f18c39933` - Add ellipse tuning and diagnostics strings.
+- `90ca9ceae22618abf3b4cb30449b1684d9f978e9` - Record the requested ellipse-geometry implementation plan before code changes.
 - `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6` - Bump WanderingGaia to 0.1.3-dev after adding the configurable visual origin.
 - `37790c48e979fef46f9b818da75342a000addad5` - Add configurable X/Y bell origin offsets while keeping outer deadzones fixed to the screen.
 - `cf655202ba784b97c48baf8dd076bf4e1e6348cc` - Add visual-origin configuration and diagnostic strings.
@@ -27,33 +31,28 @@
 - Bell swing animation timing remains `0.07` seconds per sprite step and was deliberately not made configurable.
 
 ## Implemented / Awaiting Test
-- `0.1.3-dev` adds configurable visual-origin offsets on top of the `0.1.2-dev` tuning workflow:
-  - `Origin X (%)` shifts the bell/ray origin horizontally relative to true UI centre;
-  - `Origin Y (%)` shifts it vertically; negative values move the origin down toward the player;
-  - edge deadzones remain fixed to the physical screen while ray-to-edge distance is recalculated from the shifted origin;
-  - the grey centre marker follows the shifted origin;
-  - the final WGCFG export and `/wg coords` diagnostics include the origin values.
-- Existing tuning workflow:
-  - `/wg test [on|off]` replaces the old standalone `/wgtest` command.
-  - `/wg config` opens a draggable tuning panel without implicitly enabling the preview.
-  - opening config shows translucent grey left/right/up/down exclusion overlays plus a centred near-range marker.
-  - left/right/up/down screen deadzones are editable percentages.
-  - five-point distance-to-outer-limit curve is editable; point 1 is the centre deadzone with radius fixed at 0%.
-  - curve preview visualises the currently applied points.
-  - near and far bell sizes are independently configurable; size interpolates using the same distance curve percentage.
-  - optional movement smoothing is configurable and defaults to 0%, preserving raw 0.1.1 behaviour.
-  - optional `Use Z for range` switches the distance curve from horizontal XY range to XYZ range when Z is available.
-  - Z is deliberately not projected onto screen direction because the documented ClassicAPI addon surface exposes world Z and player yaw but not the camera pitch/projection state needed for a correct screen-plane transform.
+- `0.1.4-dev` ellipse tuning model:
+  - `Origin X (%)` / `Origin Y (%)` move the visual player-origin relative to true UI centre.
+  - `Inner X/Y` are ellipse radii as percentages of screen width/height and define the character exclusion zone.
+  - `Outer X/Y` are ellipse radii as percentages of screen width/height and define maximum normal bell travel.
+  - the bell starts on the inner ellipse at the minimum-range end of the curve and interpolates toward the outer ellipse according to the existing five-point distance curve.
+  - the effective inner boundary expands by half the current bell size and the effective outer boundary contracts by half the bell size, so the bell graphic itself respects the configured ellipses rather than only its centre point.
+  - a final physical-screen clamp prevents deliberately extreme origin/ellipse settings from losing the bell off-screen.
+  - opening `/wg config` shows a translucent filled inner ellipse, a dotted outer ellipse and an origin cross/label.
+  - range calculation always uses XYZ distance when both Z values are available; there is no longer a user-facing Z toggle. If Z is unavailable, the runtime falls back to 2D and `/wg coords` reports that fallback.
+  - horizontal screen direction still uses the existing relative 2D bearing because camera pitch/projection data is not available.
+  - range-based near/far bell sizing remains enabled and uses the same curve percentage.
+  - smoothing remains configurable and defaults to 0%.
+  - animation timing remains fixed at `0.07` seconds per sprite step.
   - settings persist in `WanderingGaiaDB`.
-  - Copy settings produces a selectable one-line `WGCFG` string for pasting back into development chat.
-- `/wg coords [on|off]` toggles live diagnostics showing player/target XYZ, deltas, 2D/3D range, selected range mode, facing/bearing/relative angle, curve percentage, bell size and screen offset.
-- Existing direction calculation, direct UI-centre anchoring and animation interval are preserved.
+  - Copy settings exports `WGCFG` with origin, inner/outer ellipse radii, curve, size and smoothing values.
+- `/wg coords [on|off]` reports XYZ positions/deltas, 2D/3D range and active range mode, bearing/facing, ellipse settings, curve percentage, bell size and final screen offset.
+- `/wg test [on|off]` remains the local target preview path.
 
 ## Current Issues
-- Requested next geometry model: configurable inner character-exclusion ellipse plus configurable outer travel ellipse, both centred on Origin X/Y and defined as screen-width/screen-height radii percentages.
-- Z range should now be always-on for range calculations; remove the config toggle while keeping horizontal bearing for direction.
-- The `0.1.2-dev` config panel has been user-tested positively overall, but its origin was fixed to true screen centre; `0.1.3-dev` adds the requested movable origin and is awaiting focused in-game confirmation.
-- Z can be used honestly for 3D range, but not for vertical screen-direction projection with the currently documented ClassicAPI Lua data.
+- The ellipse geometry/config overlay is statically checked but not yet user-tested in WoW.
+- `0.1.3-dev` movable-origin testing was superseded by the requested ellipse model before a focused result was recorded.
+- Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
 - Real ring communication remains intentionally untouched until the local bell tuning baseline is settled.
 
@@ -62,16 +61,23 @@
 ### Last Test
 - Version/state: `0.1.2-dev`.
 - Passed: user reports the tuning controls are good overall in game.
-- Issue found: the bell/ray origin needs to be movable downward to visually match the player's on-screen position.
-- Existing directional behaviour remains acceptable.
+- Directional movement remains acceptable.
+- User preference established from tuning: XYZ/Z-inclusive range feels better, and range-based bell sizing feels natural.
+- Geometry change requested after this test: replace rectangular limits with inner/outer ellipses around the movable player-origin.
 
 ### Next Test
-- Update through TocPilot to `0.1.3-dev` / implementation head `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`.
-- Open `/wg config` and set a negative `Origin Y (%)` until the grey centre marker visually matches the player.
-- Confirm the bell now orbits/radiates around that shifted point while left/right/up/down edge deadzones remain fixed to the screen.
-- Confirm `Origin X (%)` also shifts the origin predictably, then return it to 0 unless horizontal adjustment is useful.
-- Confirm the existing distance curve, bell sizing, Z-range option and smoothing still behave as before.
-- Use Copy settings and paste the resulting `WGCFG` line back into chat once the origin and other tuning values feel right.
+- Update through TocPilot to `0.1.4-dev` / implementation head `49446d640b9bf658e98e08789919e3d2c166774f`.
+- Open `/wg config` and first tune Origin Y so the origin cross visually matches the character.
+- Tune `Inner X/Y` until the filled grey inner ellipse covers the character area the bell should never enter.
+- Tune `Outer X/Y` until the dotted outer ellipse describes the desired maximum travel shape.
+- Run `/wg test on` and rotate around targets at several ranges:
+  - confirm the bell never enters the inner character ellipse;
+  - confirm it moves naturally toward but does not normally pass the outer ellipse;
+  - confirm range-based size still feels natural;
+  - confirm height differences affect radial range without changing the horizontal bearing direction;
+  - confirm the existing distance curve remains useful, or report if a near-linear curve is sufficient.
+- Run `/wg coords` while testing and confirm range mode normally reports `3D`.
+- Use Copy settings and paste the resulting `WGCFG` line back into chat once the geometry feels right.
 
 ## Planned / To-do
 
@@ -85,28 +91,22 @@
 
 ### 2. Direction and Distance Hint
 - Treat ClassicAPI as an optional enhancement, not a base dependency.
-- When ClassicAPI provides reliable facing and unit world positions, calculate the sender's exact relative 2D bearing from the recipient and ignore Z.
-- Use continuous bearing rather than snapping to coarse left/right/front/back sectors.
-- Include a near-distance deadzone so effectively overlapping positions do not produce unstable direction.
-- If directional data is unavailable, use a centred non-directional bell fallback.
-- Encode approximate distance as how far the bell appears from the safe-area centre toward the screen edge in the sender's direction.
-- Tune the distance curve perceptually rather than using a strict linear yards-to-screen mapping.
-- Current target behaviour:
-  - approximately 10 yards -> about 20% toward the available edge;
-  - approximately 90 yards -> about 90% toward the available edge;
-  - very large distances clamp before the visual boundary.
+- When ClassicAPI provides reliable facing and unit world positions, calculate continuous horizontal relative bearing from player to sender.
+- Use XYZ distance for radial range whenever Z is available; fall back to 2D only when Z is unavailable.
+- Do not fake vertical screen projection from Z without camera pitch/projection data.
+- Encode approximate distance as interpolation between the inner and outer ellipse intersections along the target bearing.
+- Keep the five-point distance curve available for perceptual tuning.
+- Keep near/far bell size scaling tied to the same curve percentage.
+- If directional data is unavailable, use a centred/non-directional fallback when real ring communication is implemented.
 
 ### 3. Recipient Screen Safe Area
 - Derive placement from the recipient client's actual UI dimensions rather than assuming a resolution.
-- Reserve likely UI-heavy regions:
-  - left 20% excluded;
-  - right 20% excluded;
-  - bottom 30% excluded;
-  - top remains available apart from icon padding.
-- Use `UIParent`'s actual `CENTER` anchor as the positional origin because direction is relative to the player character.
-- Express bell travel only as offsets from that centre anchor; do not reconstruct the centre from `BOTTOMLEFT` coordinates.
-- Cast the directional ray from the centre anchor and place the bell by percentage of usable distance to the intersected safe-area boundary.
-- Keep the bell frame itself fully inside the usable region.
+- Use configurable Origin X/Y as the apparent player position.
+- Use a configurable inner ellipse as the character exclusion zone.
+- Use a configurable outer ellipse as the normal maximum travel boundary.
+- Define ellipse X/Y values as radii in percentages of screen width/height.
+- Expand/contract effective ellipse intersections by bell half-size so the graphic itself respects the limits.
+- Retain a physical screen-edge clamp as a final safety guard only.
 
 ### 4. Blessing of Protection Gag
 - Implement only after the bell foundation is working.
@@ -130,4 +130,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Implement the requested ellipse model on `dev`: inner ellipse as the minimum bell radius around the player-origin, outer ellipse as maximum travel, both configurable by horizontal/vertical screen-percentage radii; keep the existing distance curve to interpolate between them; make XYZ range mandatory; preserve range-based bell sizing and animation timing; keep a final physical-screen safety clamp; update config overlays, `/wg coords`, WGCFG export, version, and this handoff. Then user-test the ellipse feel in game.
+Update through TocPilot to `0.1.4-dev` / `49446d640b9bf658e98e08789919e3d2c166774f`. In `/wg config`, tune Origin Y first, then Inner X/Y around the character and Outer X/Y for maximum travel. Test `/wg test on` across bearings, ranges and height differences; confirm the bell stays outside the inner ellipse, respects the outer ellipse, uses 3D range and retains natural range-based sizing. Then paste the Copy settings `WGCFG` line back into chat so the tuned values can become the install defaults.
