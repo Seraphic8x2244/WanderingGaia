@@ -8,6 +8,7 @@
 - `0.1.9-dev` Ring Bell refinement implementation: `7d21ab0189db669cc8a294f7a400deed048fe397`.
 - Stale-position lifetime cleanup: `3c92f85ed07cc16a9147ffed710d570024ebfe86`.
 - `0.1.9-dev` version bump: `694881e735323863b6597f74647db31d72af3f1d`.
+- On-demand remote-position protocol implementation: `95107863bde6447fb4b1d731208bb595fb8d35ee`.
 - Stable `main` release commit: `889a4a5daf1807e7a104b3eae413d26aa3468249` (`0.1.8`).
 - Stable promotion PR: `#1`, squash-merged.
 - Ring Bell implementation commit: `11f53ec97031b7f9463c8224d327110e0980cef4`.
@@ -130,19 +131,24 @@
 - Existing recipient cancellation semantics are unchanged: already targeting the ringer when `RING:1` arrives does not suppress the ring; only a later `PLAYER_TARGET_CHANGED` onto that ringer cancels it.
 
 ### On-demand remote position refresh
-- Extend `0.1.9-dev` with optional backward-compatible position messages:
+- Implemented as optional backward-compatible messages:
   - `POSQ:<ringer>` — an actively rung client requests the named ringer's current player position.
   - `POS:<recipient>:<map>:<west>:<north>:<z-or-n>` — the requested ringer replies group-wide; only the named recipient consumes it, and `arg4` remains the authoritative ringer identity.
-- Receiver behavior:
-  - continue using local `UnitPosition(ringer)` whenever available;
-  - on the first local-position failure for an active ring, request immediately;
-  - while local position remains unavailable, send at most one request per second per active ringer;
-  - use the most recent local/remote position as the cached endpoint between replies;
-  - stop requesting immediately when local `UnitPosition(ringer)` works again or the ring ends.
-- Ringer behavior:
-  - respond only when the requested ringer name equals `UnitName("player")`, requester is a real grouped sender, and local `UnitPosition("player")` is available;
-  - response identifies the requester as recipient so multiple simultaneous rings remain independent.
+- Receiver behavior implemented:
+  - local `UnitPosition(ringer)` remains primary and produces zero position-request traffic while available;
+  - first local-position failure for an active ring requests immediately;
+  - continued failure sends at most one `POSQ` per second per active ringer;
+  - newest local/remote position updates the existing cached endpoint between replies;
+  - request timing resets immediately when local `UnitPosition(ringer)` works again;
+  - request state/cache clear when the ring ends.
+- Ringer behavior implemented:
+  - replies only for a real grouped sender, only in ringer mode, only when `POSQ` names the local player, and only when that requester is currently present in `outgoingRings`;
+  - reads only `UnitPosition("player")` for the reply;
+  - response names the requester as recipient, preserving independent simultaneous rings.
+- Remote `POS` data is consumed only by an active incoming ring from the authoritative addon-message sender and only when its payload recipient matches the local player.
+- Map mismatch is rejected by the existing geometry/cache path; the bell remains non-directional until a usable same-map endpoint is available.
 - `0.1.8` and earlier clients ignore the unknown `POSQ`/`POS` messages and keep their existing behavior.
+- Static checks: no modern comm APIs, no missing locale keys, existing `RING`/`CANCEL` protocol unchanged, approximately 128 top-level chunk locals, no CI available.
 
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
@@ -151,4 +157,13 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Implement the optional on-demand position refresh on `0.1.9-dev`: local `UnitPosition(ringer)` stays primary; first failure sends `POSQ` immediately and continued failure requests at most once per second; the ringer replies with its own current world position; the recipient updates the active ring's cached endpoint and continues live local-player/facing projection between replies. Preserve all current sender-control refinements, Vanilla communication APIs, independent per-recipient state, and backward compatibility. Then statically verify parser/security/API behavior and hand off a real two-client test plan before touching `main`.
+User-test the complete `0.1.9-dev` build on both clients before touching `main`:
+1. Reload both clients and confirm no Lua errors.
+2. Verify sender-control behavior: mirrored-above-centre position, static when inactive, animated when active, left click ring/re-ring with ~3.14s throttle, right click immediate stop.
+3. Ring Gaia while close enough that her local `UnitPosition(ringer)` works; normal directional/distance behavior should be unchanged.
+4. Move the ringer far enough that Gaia previously snapped to centre. The first local-position failure should preserve the cached direction immediately; within the remote refresh cycle the bell should continue tracking the ringer's transmitted position instead of freezing permanently.
+5. While the ringer remains far away and moves, Gaia's bell endpoint should refresh roughly once per second while Gaia's own movement/turning remains smooth at the normal update rate.
+6. Return inside local positional visibility; remote requests should stop automatically and live local direction/distance should resume.
+7. Right-click stop while far away; the bell should disappear immediately and position requests must cease.
+8. Recheck already-targeting-ringer cancellation semantics and normal target-away/target-back cancellation.
+Do not promote to stable until this full real two-client path is user-verified.
