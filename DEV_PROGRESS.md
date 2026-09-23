@@ -72,36 +72,20 @@
 - No GitHub Actions/CI workflow exists; static inspection is not an in-game test.
 
 ## Current Issues / Untested
-- `0.1.8-dev` has not yet been loaded in WoW.
+- `0.1.8-dev` has now passed the planned solo in-game test with no reported Lua errors.
 - Real cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and remote cancellation are intentionally untested before gifting.
 - Sender control bell position (`UIParent CENTER`, Y -145, 42 px) is provisional until the solo UI test.
 - For the solo incoming-ring simulation, the simulated sender is the current target unit. If you target away, the debug visual falls back to the configured origin until you retarget/cancel; this does not affect real group-unit resolution.
 - Native 1.12.1 has no camera pitch/projection data for true vertical projection; Z remains radial-distance-only as before.
 
-## Next Test — Solo Client
-1. Update/install `dev` and confirm `0.1.8-dev` loads with no Lua errors.
-2. Test ringer/control state:
-   - `/wg ringer`
-   - target any convenient NPC/player
-   - `/wg debug discover`
-   - confirm the small sender bell control appears
-   - click it once, then `/wg debug state`; outgoing should be `yes`
-   - click it again, then `/wg debug state`; outgoing should be `no`
-3. Test recipient presentation:
-   - `/wg client`
-   - target a convenient NPC/player
-   - `/wg debug ring`
-   - confirm `gaiasbell.wav` plays once
-   - confirm the animated bell appears and follows the same direction/distance behaviour as the already-tested target preview while rotating/moving
-   - `/wg debug off` should remove it
-4. Test recipient click-to-cancel:
-   - with the simulated sender targeted, `/wg debug ring`
-   - target something else
-   - retarget the simulated sender
-   - confirm the bell cancels
-   - `/wg debug state` should report incoming = 0
-5. Run `/wg debug clear` after testing.
-6. Do not involve the intended gift recipient before gifting.
+## Last Test — Solo Client
+- User-tested `0.1.8-dev` in WoW successfully.
+- Ringer mode, simulated client discovery, target-gated sender bell visibility, and click-on/click-off outgoing state behaved as designed.
+- Client-mode simulated incoming ring played `gaiasbell.wav` and used the existing directional/distance geometry as intended.
+- Simulated ring-off removed the incoming presentation.
+- Target-to-cancel behaved as designed: after `/wg debug ring` on an NPC, deselecting caused the documented debug-only fallback at the configured origin; reselecting the same simulated sender cancelled the bell.
+- Everything else in the planned solo test behaved as described.
+- This confirms the local UI/state/sound/geometry/cancel paths. It does not validate real PARTY/RAID addon-message delivery between two clients.
 
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
@@ -110,4 +94,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-User-test `0.1.8-dev` solo using the sequence above. First priority is zero Lua errors and correct sender-control visibility/toggle state; then verify the processed `gaiasbell.wav`, directional incoming-ring presentation, ring-off, and target-to-cancel behaviour. Report the exact first failure if any. Do not expand scope or retune geometry unless the solo test demonstrates a real issue.
+Treat the `0.1.8-dev` Ring Bell local/runtime behavior as user-verified. Do not retune geometry. The only unverified Ring Bell risk is real cross-client PARTY/RAID transport, which is intentionally deferred to preserve the gift/surprise. Before any stable promotion, separate/remove the solo debug harness from the distributable stable build while preserving the real client/ringer runtime and explicit wire protocol.
