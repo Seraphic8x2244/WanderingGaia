@@ -3,7 +3,8 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.3-dev`
-- Implementation head ready for in-game test: `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`
+- Latest implementation baseline before ellipse work: `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`
+- Active work: replace rectangular screen deadzones with inner/outer ellipses, keep the distance curve, make 3D XYZ range mandatory, and preserve range-based bell sizing.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
@@ -49,6 +50,8 @@
 - Existing direction calculation, direct UI-centre anchoring and animation interval are preserved.
 
 ## Current Issues
+- Requested next geometry model: configurable inner character-exclusion ellipse plus configurable outer travel ellipse, both centred on Origin X/Y and defined as screen-width/screen-height radii percentages.
+- Z range should now be always-on for range calculations; remove the config toggle while keeping horizontal bearing for direction.
 - The `0.1.2-dev` config panel has been user-tested positively overall, but its origin was fixed to true screen centre; `0.1.3-dev` adds the requested movable origin and is awaiting focused in-game confirmation.
 - Z can be used honestly for 3D range, but not for vertical screen-direction projection with the currently documented ClassicAPI Lua data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
@@ -127,4 +130,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Update through TocPilot to `0.1.3-dev` / `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6`. In `/wg config`, tune `Origin Y (%)` negative until the grey centre marker matches the player's visual position, verify the bell's directional orbit now uses that point while the outer deadzones remain fixed, then paste the Copy settings `WGCFG` line back into chat so the tuned values can become the install defaults.
+Implement the requested ellipse model on `dev`: inner ellipse as the minimum bell radius around the player-origin, outer ellipse as maximum travel, both configurable by horizontal/vertical screen-percentage radii; keep the existing distance curve to interpolate between them; make XYZ range mandatory; preserve range-based bell sizing and animation timing; keep a final physical-screen safety clamp; update config overlays, `/wg coords`, WGCFG export, version, and this handoff. Then user-test the ellipse feel in game.
