@@ -188,8 +188,11 @@ local function PlaceBellForTarget()
         return
     end
 
-    local centerX = (left + right) / 2
-    local centerY = (bottom + top) / 2
+    -- Direction is relative to the player character, so cast from the
+    -- physical screen centre. The safe-area bounds still limit how far
+    -- the bell can travel toward each edge.
+    local centerX = width / 2
+    local centerY = height / 2
 
     local edgeX = 1000000
     local edgeY = 1000000
