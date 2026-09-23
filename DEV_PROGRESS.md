@@ -101,6 +101,7 @@
 - The recipient can cancel an active ring by targeting/clicking the active ringer's character; send a cancellation message so the controller can clear its active state too.
 - Keep ring/cancel state explicit in the wire protocol; do not infer cancellation merely from target changes on the controller.
 - No pseudo-security/authorized-ringer system; group membership plus active client-mode announcement is the intended scope.
+- Do not add artificial ringing guardrails: no single-recipient restriction, forced replacement of an existing ring, arbitrary cooldown, or similar limit merely to simplify state. Model the real ring state cleanly instead.
 - Keep the approved PNG as source artwork and the committed 256x64 32-bit uncompressed TGA as the WoW 1.12.1 runtime texture.
 
 ### 2. Direction and Distance Hint
