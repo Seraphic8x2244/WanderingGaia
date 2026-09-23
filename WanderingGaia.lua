@@ -178,45 +178,40 @@ local function PlaceBellForTarget()
         return
     end
 
-    local left = (width * SAFE_LEFT) + half
-    local right = (width * SAFE_RIGHT) - half
-    local bottom = (height * SAFE_BOTTOM) + half
-    local top = (height * SAFE_TOP) - half
+    -- Keep all travel limits as offsets from UIParent's actual CENTER
+    -- anchor. Do not reconstruct the centre from BOTTOMLEFT coordinates.
+    local leftOffset = ((width * SAFE_LEFT) + half) - (width / 2)
+    local rightOffset = ((width * SAFE_RIGHT) - half) - (width / 2)
+    local bottomOffset = ((height * SAFE_BOTTOM) + half) - (height / 2)
+    local topOffset = ((height * SAFE_TOP) - half) - (height / 2)
 
-    if right <= left or top <= bottom then
+    if rightOffset <= leftOffset or topOffset <= bottomOffset then
         bell:Hide()
         return
     end
-
-    -- Direction is relative to the player character, so cast from the
-    -- physical screen centre. The safe-area bounds still limit how far
-    -- the bell can travel toward each edge.
-    local centerX = width / 2
-    local centerY = height / 2
 
     local edgeX = 1000000
     local edgeY = 1000000
 
     if directionX > 0.0001 then
-        edgeX = (right - centerX) / directionX
+        edgeX = rightOffset / directionX
     elseif directionX < -0.0001 then
-        edgeX = (left - centerX) / directionX
+        edgeX = leftOffset / directionX
     end
 
     if directionY > 0.0001 then
-        edgeY = (top - centerY) / directionY
+        edgeY = topOffset / directionY
     elseif directionY < -0.0001 then
-        edgeY = (bottom - centerY) / directionY
+        edgeY = bottomOffset / directionY
     end
 
     local edgeDistance = math.min(edgeX, edgeY)
     local radius = edgeDistance * DistancePercent(distance)
-
-    local x = centerX + (directionX * radius)
-    local y = centerY + (directionY * radius)
+    local offsetX = directionX * radius
+    local offsetY = directionY * radius
 
     bell:ClearAllPoints()
-    bell:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+    bell:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
     bell:Show()
 end
 
