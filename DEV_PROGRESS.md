@@ -9,8 +9,10 @@
 - Stale-position lifetime cleanup: `3c92f85ed07cc16a9147ffed710d570024ebfe86`.
 - `0.1.9-dev` version bump: `694881e735323863b6597f74647db31d72af3f1d`.
 - On-demand remote-position protocol implementation: `95107863bde6447fb4b1d731208bb595fb8d35ee`.
-- Stable `main` release commit: `889a4a5daf1807e7a104b3eae413d26aa3468249` (`0.1.8`).
-- Stable promotion PR: `#1`, squash-merged.
+- Stable `main` release commit: `09f6dd18bd56faca23e0336a463e6969bba6849e` (`0.1.9`).
+- Previous stable `0.1.8` release commit: `889a4a5daf1807e7a104b3eae413d26aa3468249`.
+- Stable `0.1.9` promotion PR: `#2`, squash-merged.
+- Previous stable `0.1.8` promotion PR: `#1`, squash-merged.
 - Ring Bell implementation commit: `11f53ec97031b7f9463c8224d327110e0980cef4`.
 - Ring Bell locale commit: `1bbc32e33ce61dbb2311c8f8edb7fba8af4d6116`.
 - Solo-test plan/handoff pre-build commit: `d63ffc9f838bd4c7e522d59de42c0ea6e8d98afa`.
@@ -163,4 +165,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Promote current `0.1.9-dev` runtime to stable `0.1.9` on `main` as explicitly authorized: branch from current `main`, replace only the stable runtime/TOC with a debug-free build from `dev`, preserve the artwork-only README and `artwork/wanderinggaia.png`, statically verify Vanilla APIs/protocol/local limits and release contents, merge, then record the resulting stable commit and hand off to a fresh chat.
+Start a fresh chat from this handoff. Stable `main` is `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`; `dev` retains the development/debug harness and current implementation history. First priority is real two-client verification of the `0.1.9` refinements: sender bell position/animation, left re-ring throttle, right-click stop, and long-range `POSQ`/`POS` tracking. Do not begin Blessing of Protection/Cena work until that verification is complete.
