@@ -3,8 +3,8 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.4-dev`
-- Implementation head ready for in-game test: `49446d640b9bf658e98e08789919e3d2c166774f`
-- Current tuning model: configurable player-origin + inner character-exclusion ellipse + outer travel ellipse + distance curve + range-based bell size.
+- Current implementation baseline: `49446d640b9bf658e98e08789919e3d2c166774f`
+- Active change: preserve the successful ellipse model but split the outer vertical radius into independently tunable Up/Down values; inner X/Y remain symmetric and outer X remains symmetric left/right.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
@@ -29,6 +29,7 @@
 - Directional movement/bearing is user-verified as working well while rotating around a target.
 - `0.1.2-dev` runtime result: user reports the config controls are good overall; the remaining usability gap was the inability to move the visual origin downward to match the apparent player position.
 - Bell swing animation timing remains `0.07` seconds per sprite step and was deliberately not made configurable.
+- `0.1.4-dev` first ellipse test: user reports the ellipse geometry removes the previous jitter and already feels intuitive.
 
 ## Implemented / Awaiting Test
 - `0.1.4-dev` ellipse tuning model:
@@ -50,7 +51,7 @@
 - `/wg test [on|off]` remains the local target preview path.
 
 ## Current Issues
-- The ellipse geometry/config overlay is statically checked but not yet user-tested in WoW.
+- First in-game ellipse test is positive, but the outer ellipse needs independent vertical Up/Down radii because the useful screen travel envelope is vertically asymmetric around the visual origin.
 - `0.1.3-dev` movable-origin testing was superseded by the requested ellipse model before a focused result was recorded.
 - Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
@@ -59,25 +60,16 @@
 ## Testing
 
 ### Last Test
-- Version/state: `0.1.2-dev`.
-- Passed: user reports the tuning controls are good overall in game.
-- Directional movement remains acceptable.
-- User preference established from tuning: XYZ/Z-inclusive range feels better, and range-based bell sizing feels natural.
-- Geometry change requested after this test: replace rectangular limits with inner/outer ellipses around the movable player-origin.
+- Version/state: `0.1.4-dev` / implementation baseline `49446d640b9bf658e98e08789919e3d2c166774f`.
+- Passed so far: user reports the ellipse model removes the previous jitter and feels intuitive immediately.
+- New tuning requirement: inner ellipse can stay symmetric; outer X can stay symmetric left/right; outer Up and Down must be independently tunable.
 
 ### Next Test
-- Update through TocPilot to `0.1.4-dev` / implementation head `49446d640b9bf658e98e08789919e3d2c166774f`.
-- Open `/wg config` and first tune Origin Y so the origin cross visually matches the character.
-- Tune `Inner X/Y` until the filled grey inner ellipse covers the character area the bell should never enter.
-- Tune `Outer X/Y` until the dotted outer ellipse describes the desired maximum travel shape.
-- Run `/wg test on` and rotate around targets at several ranges:
-  - confirm the bell never enters the inner character ellipse;
-  - confirm it moves naturally toward but does not normally pass the outer ellipse;
-  - confirm range-based size still feels natural;
-  - confirm height differences affect radial range without changing the horizontal bearing direction;
-  - confirm the existing distance curve remains useful, or report if a near-linear curve is sufficient.
-- Run `/wg coords` while testing and confirm range mode normally reports `3D`.
-- Use Copy settings and paste the resulting `WGCFG` line back into chat once the geometry feels right.
+- After implementing asymmetric outer vertical radii, update through TocPilot to the new dev head.
+- Tune Origin Y, Inner X/Y, Outer X, Outer Up and Outer Down.
+- Run `/wg test on` across bearings, ranges and height differences.
+- Confirm the bell remains outside the inner ellipse, follows the asymmetric outer boundary cleanly, normally reports 3D range, and retains natural range-based sizing.
+- Use Copy settings and paste the resulting `WGCFG` line back into chat so the tuned values can become install defaults.
 
 ## Planned / To-do
 
@@ -103,8 +95,8 @@
 - Derive placement from the recipient client's actual UI dimensions rather than assuming a resolution.
 - Use configurable Origin X/Y as the apparent player position.
 - Use a configurable inner ellipse as the character exclusion zone.
-- Use a configurable outer ellipse as the normal maximum travel boundary.
-- Define ellipse X/Y values as radii in percentages of screen width/height.
+- Use a configurable outer travel boundary with symmetric left/right X radius and independent Up/Down Y radii.
+- Define ellipse radii as percentages of screen width/height.
 - Expand/contract effective ellipse intersections by bell half-size so the graphic itself respects the limits.
 - Retain a physical screen-edge clamp as a final safety guard only.
 
@@ -130,4 +122,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Update through TocPilot to `0.1.4-dev` / `49446d640b9bf658e98e08789919e3d2c166774f`. In `/wg config`, tune Origin Y first, then Inner X/Y around the character and Outer X/Y for maximum travel. Test `/wg test on` across bearings, ranges and height differences; confirm the bell stays outside the inner ellipse, respects the outer ellipse, uses 3D range and retains natural range-based sizing. Then paste the Copy settings `WGCFG` line back into chat so the tuned values can become the install defaults.
+Implement the asymmetric outer vertical boundary on `dev`: keep inner X/Y symmetric, keep outer X symmetric left/right, replace the single outer Y radius with independent Outer Up and Outer Down values throughout defaults/persistence, normalization, placement geometry, overlay drawing, config fields, `/wg coords`, and `WGCFG` export. Preserve current 3D range, distance curve, bell sizing, smoothing and animation behaviour. Then static-check and hand back a new dev build for in-game tuning.
