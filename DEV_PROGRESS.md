@@ -3,7 +3,7 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.7-dev`
-- Current handoff head: `c02259ebf47a724ac3e395457b6cb97a62e91445`.
+- Current pre-build head: `51f02c970028a8048e77877edce73053084730ad` (user upload of `artwork/gaiasbell.wav`).
 - `0.1.7-dev` one-time settings revision reset is user-verified: first load reset to the promoted defaults including `Outer Up = 60`, and a subsequent user change persisted across restart.
 - Current defaults: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
 - Settings revision `2` intentionally resets pre-0.1.7 saved tuning once, then normal persistence resumes.
@@ -82,9 +82,11 @@
 
 ### Next Test
 - No geometry test is currently required.
-- Next runtime work is the Ring Bell communication/control slice described below.
+- Next runtime work is the Ring Bell communication/control slice described below, with solo simulation on the developer's own client.
 - Use the proven Vanilla 1.12.1 communication pattern from `Seraphic8x2244/pfui_tankicons`: `SendAddonMessage(prefix, payload, "RAID"/"PARTY")`, receive `CHAT_MSG_ADDON` through legacy `arg1`/`arg2`/`arg4`, and do not use modern addon-prefix registration APIs.
 - No GitHub Actions/CI workflow exists in this repository.
+- This addon is a gift/surprise for the intended recipient. Do not require installing or testing it on that recipient before gifting.
+- Ring Bell development must therefore include a dev-only solo simulation path that invokes the same discovery/ring/cancel state handlers used by real `CHAT_MSG_ADDON` traffic; this validates local UI/state/sound/geometry without pretending to validate the actual network transport.
 
 ## Planned / To-do
 
@@ -146,4 +148,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Implement the first Ring Bell communication/control slice without changing the tested geometry: mirror `pfUI_TankIcons`' Vanilla 1.12.1 addon-message pattern, add session-default client mode plus `/wg ringer` control mode, discover active client-mode group members, and show the sender bell control only for a discovered client target. Wire ring/cancel state so the controller can toggle the ring and the recipient can cancel by targeting the active ringer. Keep this work on `dev` and mark it untested until verified in WoW.
+Implement the solo-testable Ring Bell build on `dev` without changing the tested geometry: mirror `pfUI_TankIcons`' Vanilla 1.12.1 addon-message pattern, add session-default client mode plus `/wg ringer` and `/wg client`, discovery of client-mode group members, target-gated sender bell control, explicit ring/cancel state, `artwork\\gaiasbell.wav` playback, and a dev-only local simulation path that feeds the same handlers as real incoming addon messages. Mark all real cross-client transport behaviour untested until it is eventually exercised after the surprise is delivered.
