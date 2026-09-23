@@ -6,6 +6,8 @@
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `00f5f001bee5b205496958a81cb26f12de1f9725` - Add 256x64 four-frame bell swing source artwork.
+- `4167d3afc2666ace134a100920505b30de6a5e12` - Document WanderingGaia initial development scope.
 - `1922a93a8787c5649f00938483e5e6cbbd860324` - Add artwork directory scaffold.
 - `0c178ae71615f061067126889204cccda48be070` - Add enUS locale scaffold.
 - `6c7154c794ceb635819f338d3b5437b98026cabf` - Add WanderingGaia main Lua file.
@@ -19,20 +21,26 @@
 - VanillaTemplate development structure copied and renamed for WanderingGaia.
 - Development contract copied from VanillaTemplate without project-specific changes.
 - Initial feature scope agreed and recorded below.
+- Four-frame bell swing artwork approved by the user and committed as `artwork/WanderingGaia_BellSwing_256x64.png`.
 - No in-game behaviour has been implemented or user-tested yet.
 
 ## Implemented / Awaiting Test
-- Development scaffold only:
+- Development scaffold:
   - `WanderingGaia.toc`
   - `WanderingGaia.lua`
   - `locales/enUS.lua`
   - `artwork/`
   - `DEV_GUIDE.md`
   - `DEV_PROGRESS.md`
+- Bell source sprite:
+  - 256x64 sheet;
+  - four 64x64 frames;
+  - progression is centre -> slight left -> further left -> full left;
+  - intended to mirror in-game for the opposite swing direction.
 
 ## Current Issues
-- None.
 - Character names/identifiers for the two intended users have not yet been added to implementation.
+- The committed bell PNG is source artwork; a WoW 1.12.1 runtime texture format such as 32-bit TGA still needs to be produced before the addon can load it in game.
 
 ## Testing
 
@@ -58,6 +66,7 @@
 - Clicking the bell sends a lightweight addon event to the recipient through a 1.12.1-compatible group channel.
 - The recipient displays a short bell visual and plays the bell sound locally.
 - No pseudo-security/authorized-ringer system; this is a personal addon, not an access-control mechanism.
+- Convert the approved bell source sprite to an in-game-compatible runtime texture before wiring the animation.
 
 ### 2. Direction and Distance Hint
 - Treat ClassicAPI as an optional enhancement, not a base dependency.
@@ -93,7 +102,6 @@
 - Do not commit copyrighted meme audio to the repository; support a local drop-in sound asset instead.
 
 ## Ideas / Backlog
-- Small pixel-art ring/shake animation using the WoW bell aesthetic.
 - Direction-aware animation entry from the calculated on-screen bearing.
 - Fine-tune bell size, duration, cooldown and distance curve from in-game testing rather than pre-optimizing them.
 
@@ -106,4 +114,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Implement the first Bell slice on `dev`: intended-partner target detection, sender-side clickable bell control, 1.12.1-compatible ring transport, and recipient-side centred bell presentation with a clean fallback path. Keep ClassicAPI directional/distance placement as the next enhancement after the basic ring path is confirmed working in game.
+Convert the approved 256x64 bell sprite to a WoW 1.12.1-compatible 32-bit TGA, then implement the first Bell slice on `dev`: intended-partner target detection, sender-side clickable bell control, 1.12.1-compatible ring transport, and recipient-side centred bell presentation with a clean fallback path. Keep ClassicAPI directional/distance placement as the next enhancement after the basic ring path is confirmed working in game.
