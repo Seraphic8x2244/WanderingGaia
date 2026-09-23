@@ -141,58 +141,33 @@ local function FillMissingDefaults(target)
 end
 
 local function NormalizeSettings(target)
-    target.minimumRange = Clamp(tonumber(target.minimumRange) or DEFAULT_SETTINGS.minimumRange, 0, 50)
-    target.originX = Clamp(tonumber(target.originX) or DEFAULT_SETTINGS.originX, -40, 40)
-    target.originY = Clamp(tonumber(target.originY) or DEFAULT_SETTINGS.originY, -40, 40)
+    -- User-entered tuning values are intentionally not capped or silently
+    -- reshaped. Extreme values are valid experiments; only non-numeric input
+    -- falls back to the configured default.
+    target.minimumRange = tonumber(target.minimumRange) or DEFAULT_SETTINGS.minimumRange
+    target.originX = tonumber(target.originX) or DEFAULT_SETTINGS.originX
+    target.originY = tonumber(target.originY) or DEFAULT_SETTINGS.originY
 
-    target.innerRadiusX = Clamp(tonumber(target.innerRadiusX) or DEFAULT_SETTINGS.innerRadiusX, 1, 45)
-    target.innerRadiusY = Clamp(tonumber(target.innerRadiusY) or DEFAULT_SETTINGS.innerRadiusY, 1, 45)
-    target.outerRadiusX = Clamp(tonumber(target.outerRadiusX) or DEFAULT_SETTINGS.outerRadiusX, 2, 50)
-    target.outerRadiusUp = Clamp(tonumber(target.outerRadiusUp) or DEFAULT_SETTINGS.outerRadiusUp, 2, 50)
-    target.outerRadiusDown = Clamp(tonumber(target.outerRadiusDown) or DEFAULT_SETTINGS.outerRadiusDown, 2, 50)
+    target.innerRadiusX = tonumber(target.innerRadiusX) or DEFAULT_SETTINGS.innerRadiusX
+    target.innerRadiusY = tonumber(target.innerRadiusY) or DEFAULT_SETTINGS.innerRadiusY
+    target.outerRadiusX = tonumber(target.outerRadiusX) or DEFAULT_SETTINGS.outerRadiusX
+    target.outerRadiusUp = tonumber(target.outerRadiusUp) or DEFAULT_SETTINGS.outerRadiusUp
+    target.outerRadiusDown = tonumber(target.outerRadiusDown) or DEFAULT_SETTINGS.outerRadiusDown
 
-    if target.outerRadiusX <= target.innerRadiusX then
-        target.outerRadiusX = math.min(50, target.innerRadiusX + 1)
-    end
+    target.curveDistance2 = tonumber(target.curveDistance2) or DEFAULT_SETTINGS.curveDistance2
+    target.curveDistance3 = tonumber(target.curveDistance3) or DEFAULT_SETTINGS.curveDistance3
+    target.curveDistance4 = tonumber(target.curveDistance4) or DEFAULT_SETTINGS.curveDistance4
+    target.curveDistance5 = tonumber(target.curveDistance5) or DEFAULT_SETTINGS.curveDistance5
 
-    if target.outerRadiusUp <= target.innerRadiusY then
-        target.outerRadiusUp = math.min(50, target.innerRadiusY + 1)
-    end
+    target.curveRadius2 = tonumber(target.curveRadius2) or DEFAULT_SETTINGS.curveRadius2
+    target.curveRadius3 = tonumber(target.curveRadius3) or DEFAULT_SETTINGS.curveRadius3
+    target.curveRadius4 = tonumber(target.curveRadius4) or DEFAULT_SETTINGS.curveRadius4
+    target.curveRadius5 = tonumber(target.curveRadius5) or DEFAULT_SETTINGS.curveRadius5
 
-    if target.outerRadiusDown <= target.innerRadiusY then
-        target.outerRadiusDown = math.min(50, target.innerRadiusY + 1)
-    end
-
-    target.curveDistance2 = Clamp(tonumber(target.curveDistance2) or DEFAULT_SETTINGS.curveDistance2, 0.1, 300)
-    if target.curveDistance2 <= target.minimumRange then
-        target.curveDistance2 = target.minimumRange + 0.1
-    end
-
-    target.curveDistance3 = Clamp(tonumber(target.curveDistance3) or DEFAULT_SETTINGS.curveDistance3, 0.2, 400)
-    if target.curveDistance3 <= target.curveDistance2 then
-        target.curveDistance3 = target.curveDistance2 + 0.1
-    end
-
-    target.curveDistance4 = Clamp(tonumber(target.curveDistance4) or DEFAULT_SETTINGS.curveDistance4, 0.3, 500)
-    if target.curveDistance4 <= target.curveDistance3 then
-        target.curveDistance4 = target.curveDistance3 + 0.1
-    end
-
-    target.curveDistance5 = Clamp(tonumber(target.curveDistance5) or DEFAULT_SETTINGS.curveDistance5, 0.4, 600)
-    if target.curveDistance5 <= target.curveDistance4 then
-        target.curveDistance5 = target.curveDistance4 + 0.1
-    end
-
-    target.curveRadius2 = Clamp(tonumber(target.curveRadius2) or DEFAULT_SETTINGS.curveRadius2, 0, 100)
-    target.curveRadius3 = Clamp(tonumber(target.curveRadius3) or DEFAULT_SETTINGS.curveRadius3, 0, 100)
-    target.curveRadius4 = Clamp(tonumber(target.curveRadius4) or DEFAULT_SETTINGS.curveRadius4, 0, 100)
-    target.curveRadius5 = Clamp(tonumber(target.curveRadius5) or DEFAULT_SETTINGS.curveRadius5, 0, 100)
-
-    target.nearSize = Clamp(tonumber(target.nearSize) or DEFAULT_SETTINGS.nearSize, 16, 192)
-    target.farSize = Clamp(tonumber(target.farSize) or DEFAULT_SETTINGS.farSize, 16, 192)
-    target.smoothing = Clamp(tonumber(target.smoothing) or DEFAULT_SETTINGS.smoothing, 0, 95)
+    target.nearSize = tonumber(target.nearSize) or DEFAULT_SETTINGS.nearSize
+    target.farSize = tonumber(target.farSize) or DEFAULT_SETTINGS.farSize
+    target.smoothing = tonumber(target.smoothing) or DEFAULT_SETTINGS.smoothing
 end
-
 local function InitializeSettings()
     if type(WanderingGaiaDB) ~= "table" then
         WanderingGaiaDB = {}
@@ -446,7 +421,7 @@ local function ComputePlacement(applySmoothing)
     end
 
     local percent = DistancePercent(geometry.distance)
-    local bellSize = BellSizeForPercent(percent)
+    local bellSize = math.max(1, BellSizeForPercent(percent))
     local half = bellSize / 2
     local originX = width * (settings.originX / 100)
     local originY = height * (settings.originY / 100)
