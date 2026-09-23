@@ -2,150 +2,112 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.7-dev`
-- Current pre-build head: `51f02c970028a8048e77877edce73053084730ad` (user upload of `artwork/gaiasbell.wav`).
-- `0.1.7-dev` one-time settings revision reset is user-verified: first load reset to the promoted defaults including `Outer Up = 60`, and a subsequent user change persisted across restart.
-- Current defaults: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
-- Settings revision `2` intentionally resets pre-0.1.7 saved tuning once, then normal persistence resumes.
-- Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
+- Version: `0.1.8-dev`
+- Latest implementation commit: `faab1321f3e73ed96cb1b24d4f26edae7e9f3023`.
+- Ring Bell implementation commit: `11f53ec97031b7f9463c8224d327110e0980cef4`.
+- Ring Bell locale commit: `1bbc32e33ce61dbb2311c8f8edb7fba8af4d6116`.
+- Solo-test plan/handoff pre-build commit: `d63ffc9f838bd4c7e522d59de42c0ea6e8d98afa`.
+- User-uploaded runtime sound commit: `51f02c970028a8048e77877edce73053084730ad`.
+- Goal: finish the directional Ring Bell gift/surprise without exposing it to the intended recipient before gifting. Blessing of Protection/Cena remains a later slice.
 
-## Recent Commits
-- `cd5ade125958b6611d61ca10ddf6fdda0e4e2b9b` - Record the 0.1.7 default-reset test handoff.
-- `b0ef0a2dddbc526d97750b9a986d9b4fe36eb69d` - Bump WanderingGaia to 0.1.7-dev.
-- `cb0da7e071dc48415b305097e541df9c5d7f5b12` - Set the tested tuning profile as defaults and add the one-time settings revision reset.
-- `f42d1c08a29012c44d0332f3d234c781c0b72f8d` - Record the final tuning defaults and reset request before implementation.
-- `21fdb0a1b583856a881603df1d70fc8c4fae07ed` - Bump WanderingGaia to 0.1.6-dev.
-- `6d7edff9f2e9343c2aac7d5b82a922ce3314fce4` - Remove physical-screen and outer-vs-inner placement guardrails.
-- `9291456eec4bf50315d1e0d15f168cb823cc3742` - Remove arbitrary tuning value caps from normalization.
-- `a946c8e9137560db2038a7f758f481702701cd7a` - Document project rule: user-owned configuration values are not arbitrarily capped or silently clamped.
-- `2b91e0e8762606598a00ab882c98b49c7adc2c05` - Bump WanderingGaia to 0.1.5-dev.
-- `553016a2b10ecc60ddebec9583fd5e4ef1163f1a` - Split outer ellipse vertical tuning into independent Up/Down radii and migrate the old symmetric Y value.
-- `95c6f45139f7f4dee04ba2cb3088dfbec56511ee` - Add asymmetric outer ellipse labels and diagnostics strings.
-- `f6533f985df2019cfafa28f9c06311d7b8f48453` - Record asymmetric outer ellipse tuning request and positive first ellipse test.
-- `49446d640b9bf658e98e08789919e3d2c166774f` - Bump WanderingGaia to 0.1.4-dev after ellipse geometry implementation.
-- `4a1cec0ee602b27cefcd7230b071e306422e623d` - Replace rectangular bell limits with inner/outer ellipse geometry; make XYZ range automatic; preserve range-based size and curve.
-- `84bef8dea24c0526c7586fd70a78c47f18c39933` - Add ellipse tuning and diagnostics strings.
-- `90ca9ceae22618abf3b4cb30449b1684d9f978e9` - Record the requested ellipse-geometry implementation plan before code changes.
-- `2e65805bd65ec25e92224ba4432c2ec3b24fc3e6` - Bump WanderingGaia to 0.1.3-dev after adding the configurable visual origin.
-- `37790c48e979fef46f9b818da75342a000addad5` - Add configurable X/Y bell origin offsets while keeping outer deadzones fixed to the screen.
-- `cf655202ba784b97c48baf8dd076bf4e1e6348cc` - Add visual-origin configuration and diagnostic strings.
-- `fb11dc26a599fa8cb2e075bcec22b43ee19673e3` - Bump WanderingGaia to 0.1.2-dev and persist tuning settings with `WanderingGaiaDB`.
-- `aad7fb62480eee8abaac772e8163f3a98450a191` - Add bell tuning controls, safe-area overlays, range sizing, optional smoothing/Z range, and coordinate diagnostics.
-- `d5b041e99871a5e6ca2f9a13393e70bad81ba4b6` - Add tuning/configuration locale strings.
-- `a14316e6776aaf640ef210bdf42b8aee1a60ea2f` - Record the 0.1.1 centre-anchor retest handoff.
-- `dc758a92572f1c562a78fbf21971c6eaf215ddb0` - Bump WanderingGaia to 0.1.1-dev after direct UI-centre anchor fix.
-- `82c479f0913e757464872b49ea3ff218dc4dc240` - Anchor bell directly to UIParent CENTER.
+## Completed / User-Verified
+- WoW 1.12.1 / Interface 11200 / Lua 5.0 baseline.
+- Directional target preview with ClassicAPI positions/facing.
+- Ellipse placement model and promoted tuning:
+  - `minrange=0`
+  - `origin=0:-10`
+  - `inner=5:15`
+  - `outer=40:60:25`
+  - `curve=0:0,10:20,20:60,44:80,80:100`
+  - `size=64:16`
+  - `smooth=50`
+- Settings revision `2` one-time reset: user verified old tuning resets once to the promoted defaults (including Outer Up = 60) and later edits persist across restart.
+- Approved bell spritesheet is committed as `artwork/WanderingGaia_BellSwing_256x64.tga`.
+- Chosen CC0 bell source was processed to mono 44.1 kHz 16-bit PCM at -4.5 dBFS and user uploaded it as `artwork/gaiasbell.wav`.
 
-## Completed / Verified
-- Repository initialized on `dev` for WoW 1.12.1 / Lua 5.0.
-- Four-frame bell artwork is committed as PNG source plus 256x64 32-bit uncompressed TGA runtime texture.
-- `0.1.1-dev` runtime result: user reports the direct-`UIParent CENTER` bell origin and DLL-provided direction behaviour work about as well as could reasonably be expected.
-- Directional movement/bearing is user-verified as working well while rotating around a target.
-- `0.1.2-dev` runtime result: user reports the config controls are good overall; the remaining usability gap was the inability to move the visual origin downward to match the apparent player position.
-- Bell swing animation timing remains `0.07` seconds per sprite step and was deliberately not made configurable.
-- `0.1.4-dev` first ellipse test: user reports the ellipse geometry removes the previous jitter and already feels intuitive.
-- `0.1.7-dev` settings revision `2` is user-verified: old tuning reset exactly once to the promoted defaults, including `Outer Up = 60`, and later edits persisted across restart rather than resetting twice.
-
-## Implemented / Awaiting Test
-- `0.1.7-dev` asymmetric outer ellipse tuning model:
-  - `Origin X (%)` / `Origin Y (%)` move the visual player-origin relative to true UI centre.
-  - `Inner X/Y` are ellipse radii as percentages of screen width/height and define the character exclusion zone.
-  - `Outer X` is the shared left/right radius; `Outer Up` and `Outer Down` independently define the upper/lower vertical travel radii.
-  - the bell starts on the inner ellipse at the minimum-range end of the curve and interpolates toward the outer ellipse according to the existing five-point distance curve.
-  - the effective inner boundary expands by half the current bell size and the effective outer boundary contracts by half the bell size, so the bell graphic itself respects the configured ellipses rather than only its centre point.
-  - opening `/wg config` shows a translucent filled inner ellipse, a dotted outer ellipse and an origin cross/label.
-  - range calculation always uses XYZ distance when both Z values are available; there is no longer a user-facing Z toggle. If Z is unavailable, the runtime falls back to 2D and `/wg coords` reports that fallback.
-  - horizontal screen direction still uses the existing relative 2D bearing because camera pitch/projection data is not available.
-  - range-based near/far bell sizing remains enabled and uses the same curve percentage.
-  - smoothing remains configurable and defaults to 0%.
-  - animation timing remains fixed at `0.07` seconds per sprite step.
-  - settings persist in `WanderingGaiaDB`.
-  - User-entered tuning values are no longer arbitrarily capped or silently reshaped; extreme values are preserved. Only the rendered bell size retains a positive floor because WoW frame dimensions must remain positive.
-  - The user-tested profile is now the install/reset default: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
-  - `SETTINGS_REVISION = 2` deliberately discards all older saved tuning once on first 0.1.7 load, writes these defaults, and records the revision so later reloads preserve user changes normally.
-  - Copy settings exports `WGCFG` with `outer=X:up:down` plus origin, inner ellipse, curve, size and smoothing values.
-- `/wg coords [on|off]` reports XYZ positions/deltas, 2D/3D range and active range mode, bearing/facing, ellipse settings, curve percentage, bell size and final screen offset.
-- `/wg test [on|off]` remains the local target preview path.
-
-## Current Issues
-- Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
-- Character names/identifiers for the eventual two-user ring feature are not implemented yet.
-- Real ring communication remains intentionally untouched until the local bell tuning baseline is settled.
-
-## Testing
-
-### Last Test
-- Version/state: `0.1.7-dev` on handoff commit `c02259ebf47a724ac3e395457b6cb97a62e91445`.
-- Passed in WoW: first load replaced the old tuning with the promoted defaults, including `Outer Up = 60`.
-- Passed in WoW: after changing a setting and restarting, the changed value persisted, confirming settings revision `2` resets only once.
-- Geometry does not need further retuning unless a real issue appears.
-
-### Next Test
-- No geometry test is currently required.
-- Next runtime work is the Ring Bell communication/control slice described below, with solo simulation on the developer's own client.
-- Use the proven Vanilla 1.12.1 communication pattern from `Seraphic8x2244/pfui_tankicons`: `SendAddonMessage(prefix, payload, "RAID"/"PARTY")`, receive `CHAT_MSG_ADDON` through legacy `arg1`/`arg2`/`arg4`, and do not use modern addon-prefix registration APIs.
-- No GitHub Actions/CI workflow exists in this repository.
-- This addon is a gift/surprise for the intended recipient. Do not require installing or testing it on that recipient before gifting.
-- Ring Bell development must therefore include a dev-only solo simulation path that invokes the same discovery/ring/cancel state handlers used by real `CHAT_MSG_ADDON` traffic; this validates local UI/state/sound/geometry without pretending to validate the actual network transport.
-
-## Planned / To-do
-
-### 1. Ring Bell
-- Runtime starts in **client mode**: the player can be rung but sees no sender control.
-- `/wg ringer` switches the current session into **control/ringer mode**; provide a simple way to return to client mode.
+## Implemented / Awaiting In-Game Test
+### Ring Bell runtime
+- Runtime session starts in **client mode**.
+- `/wg ringer` enters ringer/control mode.
+- `/wg client` returns to client mode.
 - Client and ringer modes are mutually exclusive.
-- Communication is group-scoped and must mirror the proven `pfUI_TankIcons` Vanilla 1.12.1 pattern: RAID when raided, PARTY when partied, `CHAT_MSG_ADDON` legacy event arguments, no modern prefix-registration API.
-- Use a lightweight query/announce handshake so a controller knows which current group members are actively in client mode.
-- In ringer mode, show the small sender bell control only while the current target has positively announced client mode.
-- Clicking the sender bell starts a ring for that targeted client; clicking it again for the same active client cancels the ring.
-- The recipient keeps the normal addon visually silent until rung.
-- While rung, the recipient resolves the sender to the current party/raid unit token and uses the existing directional/distance geometry for bell placement when available.
-- The recipient can cancel an active ring by targeting/clicking the active ringer's character; send a cancellation message so the controller can clear its active state too.
-- Keep ring/cancel state explicit in the wire protocol; do not infer cancellation merely from target changes on the controller.
-- No pseudo-security/authorized-ringer system; group membership plus active client-mode announcement is the intended scope.
-- Do not add artificial ringing guardrails: no single-recipient restriction, forced replacement of an existing ring, arbitrary cooldown, or similar limit merely to simplify state. Model the real ring state cleanly instead.
-- Keep the approved PNG as source artwork and the committed 256x64 32-bit uncompressed TGA as the WoW 1.12.1 runtime texture.
-- Chosen ring sound source: Freesound `bell2.wav` by `creeeeak` (sound 531021), licensed CC0. Runtime asset name will be `sound\\gaiasbell.wav`.
-- Prepare `gaiasbell.wav` from the original source without compression/limiting: reduce gain from the hot source, preserve the natural attack/decay, trim only dead air, convert to mono 16-bit PCM WAV, and retain 44.1 kHz unless testing shows a client-specific reason to change it.
+- Vanilla communication mirrors the proven `pfUI_TankIcons` pattern:
+  - `SendAddonMessage(prefix, payload, "RAID"/"PARTY")`
+  - `CHAT_MSG_ADDON`
+  - legacy `arg1` prefix, `arg2` payload, `arg4` sender
+  - no `RegisterAddonMessagePrefix` / `C_ChatInfo`.
+- Wire messages are explicit:
+  - `Q` discovery query
+  - `MODE:C` client announcement
+  - `MODE:R` ringer announcement
+  - `RING:1:<recipient>`
+  - `RING:0:<recipient>`
+  - `CANCEL:<ringer>`
+- Ringer tracks positively discovered client-mode group members.
+- Sender control bell appears only while targeting a discovered client.
+- Clicking the sender bell toggles that target's ring on/off.
+- Outgoing ring state is keyed per recipient; no single-recipient restriction, forced replacement, arbitrary cooldown, or other artificial ringing guardrail.
+- Incoming ring state is keyed per sender and can display separate simultaneous bell frames.
+- Incoming `RING:1` plays `Interface\\AddOns\\WanderingGaia\\artwork\\gaiasbell.wav`.
+- Incoming rings resolve the actual addon-message sender to a party/raid unit and reuse the existing tested geometry.
+- The geometry formula itself was not retuned; it was parameterized from hardcoded `"target"` to an arbitrary unit token.
+- Without directional data, an incoming ring falls back to the configured visual origin rather than disappearing.
+- A client cancels an active incoming ring by targeting the active ringer; cancellation is sent back so that ringer clears its outgoing state.
+- Roster/mode changes clean stale state rather than leaving orphaned rings.
 
-### 2. Direction and Distance Hint
-- Treat ClassicAPI as an optional enhancement, not a base dependency.
-- When ClassicAPI provides reliable facing and unit world positions, calculate continuous horizontal relative bearing from player to sender.
-- Use XYZ distance for radial range whenever Z is available; fall back to 2D only when Z is unavailable.
-- Do not fake vertical screen projection from Z without camera pitch/projection data.
-- Encode approximate distance as interpolation between the inner and outer ellipse intersections along the target bearing.
-- Keep the five-point distance curve available for perceptual tuning.
-- Keep near/far bell size scaling tied to the same curve percentage.
-- If directional data is unavailable, use a centred/non-directional fallback when real ring communication is implemented.
+### Solo dev simulation
+- The intended recipient must not be used for pre-gift testing.
+- Dev-only commands exercise the same local discovery/ring/cancel state handlers used by real addon messages:
+  - `/wg debug discover` — while in ringer mode, treat the current target as a discovered client.
+  - `/wg debug ring` — while in client mode, simulate an incoming ring from the current target.
+  - `/wg debug off` — simulate ring-off from the current target.
+  - `/wg debug state` — print current mode/target/discovery/outgoing/incoming state.
+  - `/wg debug clear` — clear solo simulation state.
+- Simulation deliberately does not claim to test the actual PARTY/RAID transport.
 
-### 3. Recipient Screen Safe Area
-- Derive placement from the recipient client's actual UI dimensions rather than assuming a resolution.
-- Use configurable Origin X/Y as the apparent player position.
-- Use a configurable inner ellipse as the character exclusion zone.
-- Use a configurable outer travel boundary with symmetric left/right X radius and independent Up/Down Y radii.
-- Define ellipse radii as percentages of screen width/height.
-- Expand/contract effective ellipse intersections by bell half-size so the graphic itself respects the limits.
+## Static Checks
+- `WanderingGaia.lua` has no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, `string.match`, or other newly introduced communication API usage found by the compatibility scan.
+- All new `L.*` references are present in `locales/enUS.lua`.
+- Single-file top-level local declaration count remains below the Lua 5.0 chunk-local limit.
+- No GitHub Actions/CI workflow exists; static inspection is not an in-game test.
 
-### 4. Blessing of Protection Gag
-- Implement only after the bell foundation is working.
-- The recipient's native 1.12.1 buff data cannot be relied on to identify the caster.
-- Detect/confirm the sender's successful Blessing of Protection on the intended partner from the sender side and signal the recipient.
-- Recipient shows a large Blessing of Protection visual and plays the locally supplied John Cena audio presentation.
-- Do not trigger for failed casts, casts on another target, or another player's Blessing of Protection.
-- End the presentation appropriately if the effect is removed early where reliable 1.12.1 state allows it.
-- Do not commit copyrighted meme audio to the repository; support a local drop-in sound asset instead.
+## Current Issues / Untested
+- `0.1.8-dev` has not yet been loaded in WoW.
+- Real cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and remote cancellation are intentionally untested before gifting.
+- Sender control bell position (`UIParent CENTER`, Y -145, 42 px) is provisional until the solo UI test.
+- For the solo incoming-ring simulation, the simulated sender is the current target unit. If you target away, the debug visual falls back to the configured origin until you retarget/cancel; this does not affect real group-unit resolution.
+- Native 1.12.1 has no camera pitch/projection data for true vertical projection; Z remains radial-distance-only as before.
 
-## Ideas / Backlog
-- Direction-aware animation entry from the calculated on-screen bearing.
-- Fine-tune bell size, duration, cooldown and distance curve from in-game testing rather than pre-optimizing them.
+## Next Test — Solo Client
+1. Update/install `dev` and confirm `0.1.8-dev` loads with no Lua errors.
+2. Test ringer/control state:
+   - `/wg ringer`
+   - target any convenient NPC/player
+   - `/wg debug discover`
+   - confirm the small sender bell control appears
+   - click it once, then `/wg debug state`; outgoing should be `yes`
+   - click it again, then `/wg debug state`; outgoing should be `no`
+3. Test recipient presentation:
+   - `/wg client`
+   - target a convenient NPC/player
+   - `/wg debug ring`
+   - confirm `gaiasbell.wav` plays once
+   - confirm the animated bell appears and follows the same direction/distance behaviour as the already-tested target preview while rotating/moving
+   - `/wg debug off` should remove it
+4. Test recipient click-to-cancel:
+   - with the simulated sender targeted, `/wg debug ring`
+   - target something else
+   - retarget the simulated sender
+   - confirm the bell cancels
+   - `/wg debug state` should report incoming = 0
+5. Run `/wg debug clear` after testing.
+6. Do not involve the intended gift recipient before gifting.
 
 ## Deferred
-- Options UI.
-- Minimap button.
-- General-purpose configuration system.
-- Libraries/frameworks.
-- Public/multi-user security model.
-- BoP/Cena implementation until the bell feature is working.
+- Any geometry retuning unless the solo test reveals a real regression.
+- Real two-client/cross-client validation until after the surprise is delivered or a safe unrelated second client becomes available.
+- Blessing of Protection / John Cena feature.
+- Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Implement the solo-testable Ring Bell build on `dev` without changing the tested geometry: mirror `pfUI_TankIcons`' Vanilla 1.12.1 addon-message pattern, add session-default client mode plus `/wg ringer` and `/wg client`, discovery of client-mode group members, target-gated sender bell control, explicit ring/cancel state, `artwork\\gaiasbell.wav` playback, and a dev-only local simulation path that feeds the same handlers as real incoming addon messages. Mark all real cross-client transport behaviour untested until it is eventually exercised after the surprise is delivered.
+User-test `0.1.8-dev` solo using the sequence above. First priority is zero Lua errors and correct sender-control visibility/toggle state; then verify the processed `gaiasbell.wav`, directional incoming-ring presentation, ring-off, and target-to-cancel behaviour. Report the exact first failure if any. Do not expand scope or retune geometry unless the solo test demonstrates a real issue.
