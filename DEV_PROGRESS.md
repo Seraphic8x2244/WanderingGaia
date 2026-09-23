@@ -11,7 +11,7 @@
 - Ring Bell locale commit: `1bbc32e33ce61dbb2311c8f8edb7fba8af4d6116`.
 - Solo-test plan/handoff pre-build commit: `d63ffc9f838bd4c7e522d59de42c0ea6e8d98afa`.
 - User-uploaded runtime sound commit: `51f02c970028a8048e77877edce73053084730ad`.
-- Goal: finish the directional Ring Bell gift/surprise without exposing it to the intended recipient before gifting. Blessing of Protection/Cena remains a later slice.
+- Goal: refine the now-successful real two-client Ring Bell behavior. Blessing of Protection/Cena remains a later slice.
 
 ## Completed / User-Verified
 - WoW 1.12.1 / Interface 11200 / Lua 5.0 baseline.
@@ -90,7 +90,7 @@
 
 ## Current Issues / Untested
 - `0.1.8-dev` has now passed the planned solo in-game test with no reported Lua errors.
-- Real cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and remote cancellation are intentionally untested before gifting.
+- Real cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and recipient cancellation have now been exercised successfully in the actual gift use.
 - Sender control bell position (`UIParent CENTER`, Y -145, 42 px) is provisional until the solo UI test.
 - For the solo incoming-ring simulation, the simulated sender is the current target unit. If you target away, the debug visual falls back to the configured origin until you retarget/cancel; this does not affect real group-unit resolution.
 - Native 1.12.1 has no camera pitch/projection data for true vertical projection; Z remains radial-distance-only as before.
@@ -104,6 +104,19 @@
 - Everything else in the planned solo test behaved as described.
 - This confirms the local UI/state/sound/geometry/cancel paths. It does not validate real PARTY/RAID addon-message delivery between two clients.
 
+## Next Dev Slice — 0.1.9-dev
+- User reports the real stable `0.1.8` surprise worked perfectly.
+- At sufficiently long range, ClassicAPI `UnitPosition(ringer)` becomes unavailable because the remote unit leaves the client-visible object set. Current runtime then falls back to the configured visual origin.
+- Requested compromise: cache each active ringer's last known world position/map. If live ringer position disappears, keep reading the recipient's current position/facing and recompute bearing toward that cached endpoint; force stale-position presentation to the outer-distance end of the existing curve. Resume live position automatically when available again, and discard stale position across map/instance mismatch.
+- Sender control bell changes:
+  - animate while the currently targeted recipient has an active outgoing ring;
+  - stop on a static frame when inactive;
+  - move it above screen centre by the same magnitude that the configured visual origin/deadzone is shifted below centre (default Origin Y = -10% -> control at +10% screen height);
+  - left click sends/rerings `RING:1`;
+  - left-click ring sends are throttled only by `2 * gaiasbell.wav` duration (processed WAV duration ~1.57s -> ~3.14s);
+  - right click sends `RING:0` immediately with no stop throttle.
+- Preserve independent per-recipient state and all already-tested recipient behavior, including: a recipient already targeting the ringer when a new ring arrives must still receive the ring; only a later target-change onto the ringer cancels it.
+
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
 - Real two-client/cross-client validation until after the surprise is delivered or a safe unrelated second client becomes available.
@@ -111,4 +124,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Deliver/install stable `main` `0.1.8` for the surprise. Ensure the installed addon folder is named exactly `WanderingGaia`. The intended recipient should simply load the addon normally and remain in default client mode; the controller uses `/wg ringer` after grouping, targets the recipient, waits for the control bell to appear, then clicks it to send the first real ring. Do not make further pre-gift changes unless a concrete packaging/install issue is found. Real cross-client PARTY/RAID transport remains the only intentionally unverified runtime path; record the first real result after the surprise.
+Implement `0.1.9-dev` on `dev` only: last-known remote-position fallback at outer distance, active/inactive sender-bell animation, mirrored upward sender-bell placement, and left-ring/right-stop controls with only the requested ~3.14s rerink throttle. Preserve the real Vanilla communication path and tested geometry. Then perform static Lua 5.0/API checks and user-test with the real two-client setup before any stable promotion.
