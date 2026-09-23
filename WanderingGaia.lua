@@ -67,8 +67,6 @@ local runtimeMode = "client"
 local knownClients = {}
 local outgoingRings = {}
 local incomingRings = {}
-local debugClients = {}
-local debugUnitOverrides = {}
 local controlButton = nil
 local controlTexture = nil
 local ToggleOutgoingRing
@@ -610,16 +608,6 @@ local function SendComm(message)
 end
 
 local function ResolveIncomingUnit(sender)
-    local override = debugUnitOverrides[sender]
-
-    if override then
-        if UnitExists(override) and UnitName(override) == sender then
-            return override
-        end
-
-        return nil
-    end
-
     return GroupUnitForName(sender)
 end
 
@@ -791,21 +779,19 @@ local function UpdateControlButton()
     controlButton:Show()
 end
 
-local function ProcessCommMessage(sender, message, simulated)
+local function ProcessCommMessage(sender, message)
     if not sender or sender == "" or not message then
         return
     end
 
     local playerName = UnitName("player")
 
-    if not simulated then
-        if sender == playerName or not GroupUnitForName(sender) then
-            return
-        end
+    if sender == playerName or not GroupUnitForName(sender) then
+        return
     end
 
     if message == "Q" then
-        if runtimeMode == "client" and not simulated then
+        if runtimeMode == "client" then
             SendComm("MODE:C")
         end
         return
@@ -933,20 +919,20 @@ local function RefreshGroupState()
     local sender, entry
 
     for name, active in pairs(knownClients) do
-        if not debugClients[name] and not GroupUnitForName(name) then
+        if not GroupUnitForName(name) then
             knownClients[name] = nil
             outgoingRings[name] = nil
         end
     end
 
     for name, active in pairs(outgoingRings) do
-        if not debugClients[name] and not GroupUnitForName(name) then
+        if not GroupUnitForName(name) then
             outgoingRings[name] = nil
         end
     end
 
     for sender, entry in pairs(incomingRings) do
-        if entry.active and not debugUnitOverrides[sender] and not GroupUnitForName(sender) then
+        if entry.active and not GroupUnitForName(sender) then
             DeactivateIncomingRing(sender)
         end
     end
@@ -1667,117 +1653,7 @@ local function ParseCommand(message)
     return string.lower(command or ""), string.lower(remainder or "")
 end
 
-local function DebugActiveIncomingCount()
-    local count = 0
-    local sender, entry
 
-    for sender, entry in pairs(incomingRings) do
-        if entry.active then
-            count = count + 1
-        end
-    end
-
-    return count
-end
-
-local function DebugState()
-    local targetName = "-"
-    local known = "no"
-    local outgoing = "no"
-
-    if UnitExists("target") and UnitName("target") then
-        targetName = UnitName("target")
-
-        if knownClients[targetName] then
-            known = "yes"
-        end
-
-        if outgoingRings[targetName] then
-            outgoing = "yes"
-        end
-    end
-
-    PrintMessage(string.format(
-        L.DEBUG_STATE,
-        runtimeMode,
-        targetName,
-        known,
-        outgoing,
-        DebugActiveIncomingCount()
-    ))
-end
-
-local function DebugClear()
-    local name, active
-    local sender, entry
-
-    for name, active in pairs(debugClients) do
-        knownClients[name] = nil
-        outgoingRings[name] = nil
-    end
-
-    for sender, entry in pairs(incomingRings) do
-        if debugUnitOverrides[sender] then
-            DeactivateIncomingRing(sender)
-        end
-    end
-
-    debugClients = {}
-    debugUnitOverrides = {}
-    UpdateControlButton()
-    PrintMessage(L.DEBUG_CLEARED)
-end
-
-local function HandleDebugCommand(remainder)
-    local command = string.lower(remainder or "")
-
-    if command == "discover" then
-        if runtimeMode ~= "ringer" then
-            PrintMessage(L.DEBUG_NEEDS_RINGER)
-            return
-        end
-
-        if not UnitExists("target") or not UnitName("target") then
-            PrintMessage(L.DEBUG_NEEDS_TARGET)
-            return
-        end
-
-        local targetName = UnitName("target")
-        debugClients[targetName] = true
-        ProcessCommMessage(targetName, "MODE:C", true)
-        PrintMessage(string.format(L.DEBUG_DISCOVERED, targetName))
-    elseif command == "ring" then
-        if runtimeMode ~= "client" then
-            PrintMessage(L.DEBUG_NEEDS_CLIENT)
-            return
-        end
-
-        if not UnitExists("target") or not UnitName("target") then
-            PrintMessage(L.DEBUG_NEEDS_TARGET)
-            return
-        end
-
-        local sender = UnitName("target")
-        debugUnitOverrides[sender] = "target"
-        ProcessCommMessage(sender, "RING:1:" .. (UnitName("player") or ""), true)
-        PrintMessage(string.format(L.DEBUG_RING_STARTED, sender))
-    elseif command == "off" then
-        if not UnitExists("target") or not UnitName("target") then
-            PrintMessage(L.DEBUG_NEEDS_TARGET)
-            return
-        end
-
-        local sender = UnitName("target")
-        ProcessCommMessage(sender, "RING:0:" .. (UnitName("player") or ""), true)
-        PrintMessage(string.format(L.DEBUG_RING_STOPPED, sender))
-    elseif command == "clear" then
-        DebugClear()
-    elseif command == "state" then
-        DebugState()
-    else
-        PrintMessage(L.DEBUG_HELP)
-    end
-end
 
 local driver = CreateFrame("Frame")
 driver:SetScript("OnUpdate", function()
@@ -1850,7 +1726,7 @@ events:SetScript("OnEvent", function()
         RefreshGroupState()
     elseif event == "CHAT_MSG_ADDON" then
         if arg1 == COMM_PREFIX then
-            ProcessCommMessage(arg4, arg2, false)
+            ProcessCommMessage(arg4, arg2)
         end
     elseif event == "PLAYER_TARGET_CHANGED" then
         CancelIncomingRingForTarget()
@@ -1878,8 +1754,6 @@ SlashCmdList["WANDERINGGAIA"] = function(message)
         SetRuntimeMode("ringer")
     elseif command == "client" then
         SetRuntimeMode("client")
-    elseif command == "debug" then
-        HandleDebugCommand(remainder)
     elseif command == "config" then
         if remainder == "" then
             ToggleConfig()
