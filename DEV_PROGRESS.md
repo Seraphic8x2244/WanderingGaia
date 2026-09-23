@@ -3,10 +3,11 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.0-dev`
-- Implementation head ready for in-game test: `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a`
+- Implementation head ready for in-game test: `47d1823e593506349fab584a4bd5690a494430c7`
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `47d1823e593506349fab584a4bd5690a494430c7` - Center bell direction on the player/screen centre while retaining safe-area edge limits.
 - `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a` - Store bell runtime texture as uncompressed TGA.
 - `6a9743191248c5ed60a852da3dd5ded9a727df24` - Add uploaded bell runtime TGA to `artwork/`.
 - `0b793578eccb613a45fdf3350ab40e16efdf43e6` - Add local directional bell preview.
@@ -22,6 +23,7 @@
 - `6b205fda44adca61bc1dd4bd6b6ea2e3ed95d612` - Initialize repository README on `main` before creating `dev`.
 
 ## Completed / Verified
+- User runtime result: directional tracking works very well in-game.
 - Repository initialized.
 - `dev` branch created.
 - VanillaTemplate development structure copied and renamed for WanderingGaia.
@@ -55,7 +57,9 @@
 
 ## Current Issues
 - Character names/identifiers for the two intended users have not yet been added to implementation.
-- The local target-preview path, ClassicAPI bearing/distance behaviour, safe-area placement and swing animation are implemented but untested in game.
+- Directional tracking is user-verified as working well in game.
+- The previous origin used the centre of the safe playfield, which made the bell appear vertically high; this has now been changed to the physical screen centre and needs a focused retest.
+- Distance curve, safe-area edge limiting and swing animation still need explicit confirmation after the origin change.
 
 ## Testing
 
@@ -66,15 +70,13 @@
 - Not tested: All runtime behaviour.
 
 ### Next Test
-- Local target-preview smoke test on implementation head `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a`:
-  - launch WoW 1.12.1 with WanderingGaia and ClassicAPI loaded and confirm there are no Lua errors;
-  - run `/wgtest on` with no target and confirm the bell remains hidden;
-  - select a visible target and confirm the bell appears in the correct relative direction;
-  - turn a full 360 degrees in place and confirm the bell tracks around the safe playfield without entering the excluded left 20%, right 20% or bottom 30% regions;
-  - move toward and away from the target and confirm the bell radius increases with distance, with effectively overlapping targets staying at the centre;
-  - watch at least one full swing cycle and confirm all four source frames appear and the opposite half-cycle mirrors correctly;
-  - run `/wgtest off` and confirm the bell hides immediately;
-  - record any Lua errors, reversed directions, bad safe-area placement, distance-curve problems or animation/texture artefacts before changing implementation.
+- Focused local target-preview retest on implementation head `47d1823e593506349fab584a4bd5690a494430c7`:
+  - with a target effectively overlapping the player, confirm the bell sits at the true visual centre of the screen;
+  - rotate around a target and confirm the already-good directional tracking is unchanged;
+  - confirm the bell still stops before the excluded left 20%, right 20% and bottom 30% safe-area boundaries;
+  - move toward and away from the target and confirm the distance radius still feels correct from the new origin;
+  - confirm the mirrored four-frame swing still renders correctly;
+  - report any Lua errors, directional regression, bad clamping, or distance feel issues before changing implementation.
 
 ## Planned / To-do
 
@@ -106,8 +108,8 @@
   - right 20% excluded;
   - bottom 30% excluded;
   - top remains available apart from icon padding.
-- Use the centre of that safe playfield as the positional origin rather than the literal physical screen centre.
-- Cast the directional ray from that origin and place the bell by percentage of usable distance to the intersected safe-area boundary.
+- Use the literal physical screen centre as the positional origin because direction is relative to the player character.
+- Cast the directional ray from screen centre and place the bell by percentage of usable distance to the intersected safe-area boundary.
 - Keep the bell frame itself fully inside the usable region.
 
 ### 4. Blessing of Protection Gag
@@ -132,4 +134,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-User-test `/wgtest on` on implementation head `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a` in WoW 1.12.1 with ClassicAPI: first verify no-target hiding, then target direction while rotating 360 degrees, distance-driven radius while moving toward/away, safe-area limits, the full mirrored four-frame swing, and finally `/wgtest off`. Report the observed behaviour and any Lua errors before changing code. Do not wire real ring communication until this local preview passes.
+User-test `/wgtest on` on implementation head `47d1823e593506349fab584a4bd5690a494430c7` in WoW 1.12.1 with ClassicAPI. First confirm an overlapping/very-near target places the bell at the true visual screen centre, then rotate around a target to ensure directional tracking remains correct, verify the existing safe-area boundaries still clamp travel, and check distance feel plus the mirrored swing animation. Report the observed behaviour and any Lua errors before further changes.
