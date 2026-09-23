@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: WanderingGaia-dev
-## Version: 0.1.6-dev
+## Version: 0.1.7-dev
 ## SavedVariables: WanderingGaiaDB
 
 locales\enUS.lua
