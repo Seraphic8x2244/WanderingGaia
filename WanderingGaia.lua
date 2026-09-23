@@ -9,27 +9,28 @@ local BELL_TEXTURE = "Interface\\AddOns\\WanderingGaia\\artwork\\WanderingGaia_B
 local POSITION_INTERVAL = 0.05
 local COORDS_INTERVAL = 0.10
 local ANIMATION_INTERVAL = 0.07
+local SETTINGS_REVISION = 2
 
 local DEFAULT_SETTINGS = {
-    minimumRange = 2,
+    minimumRange = 0,
     originX = 0,
-    originY = 0,
-    innerRadiusX = 6,
-    innerRadiusY = 10,
-    outerRadiusX = 30,
-    outerRadiusUp = 40,
-    outerRadiusDown = 40,
+    originY = -10,
+    innerRadiusX = 5,
+    innerRadiusY = 15,
+    outerRadiusX = 40,
+    outerRadiusUp = 60,
+    outerRadiusDown = 25,
     curveDistance2 = 10,
     curveRadius2 = 20,
-    curveDistance3 = 40,
-    curveRadius3 = 48,
-    curveDistance4 = 90,
-    curveRadius4 = 90,
-    curveDistance5 = 110,
-    curveRadius5 = 92,
+    curveDistance3 = 20,
+    curveRadius3 = 60,
+    curveDistance4 = 44,
+    curveRadius4 = 80,
+    curveDistance5 = 80,
+    curveRadius5 = 100,
     nearSize = 64,
-    farSize = 64,
-    smoothing = 0,
+    farSize = 16,
+    smoothing = 50,
 }
 
 local settings = {}
@@ -159,40 +160,19 @@ local function NormalizeSettings(target)
     target.smoothing = tonumber(target.smoothing) or DEFAULT_SETTINGS.smoothing
 end
 local function InitializeSettings()
-    if type(WanderingGaiaDB) ~= "table" then
+    if type(WanderingGaiaDB) ~= "table" or WanderingGaiaDB.settingsRevision ~= SETTINGS_REVISION then
+        -- Revision 2 intentionally resets all previous tuning so the tested
+        -- profile becomes the actual starting point after this update.
         WanderingGaiaDB = {}
+        CopyDefaults(WanderingGaiaDB)
+        WanderingGaiaDB.settingsRevision = SETTINGS_REVISION
+    else
+        FillMissingDefaults(WanderingGaiaDB)
+        NormalizeSettings(WanderingGaiaDB)
     end
-
-    -- Migrate the old yard-based centre setting if this SavedVariables file
-    -- predates the ellipse model. Old rectangular deadzones and the Z toggle
-    -- are intentionally retired rather than mapped onto unrelated geometry.
-    if WanderingGaiaDB.minimumRange == nil and WanderingGaiaDB.centerDeadzone ~= nil then
-        WanderingGaiaDB.minimumRange = WanderingGaiaDB.centerDeadzone
-    end
-
-    -- Preserve the existing symmetric outer Y tuning when moving to separate
-    -- upper/lower radii.
-    if WanderingGaiaDB.outerRadiusUp == nil and WanderingGaiaDB.outerRadiusY ~= nil then
-        WanderingGaiaDB.outerRadiusUp = WanderingGaiaDB.outerRadiusY
-    end
-    if WanderingGaiaDB.outerRadiusDown == nil and WanderingGaiaDB.outerRadiusY ~= nil then
-        WanderingGaiaDB.outerRadiusDown = WanderingGaiaDB.outerRadiusY
-    end
-
-    FillMissingDefaults(WanderingGaiaDB)
-    NormalizeSettings(WanderingGaiaDB)
-
-    WanderingGaiaDB.centerDeadzone = nil
-    WanderingGaiaDB.deadzoneLeft = nil
-    WanderingGaiaDB.deadzoneRight = nil
-    WanderingGaiaDB.deadzoneUp = nil
-    WanderingGaiaDB.deadzoneDown = nil
-    WanderingGaiaDB.useZ = nil
-    WanderingGaiaDB.outerRadiusY = nil
 
     settings = WanderingGaiaDB
 end
-
 CopyDefaults(settings)
 NormalizeSettings(settings)
 
