@@ -2,12 +2,16 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.5-dev`
-- Current implementation head ready for in-game test: `2b91e0e8762606598a00ab882c98b49c7adc2c05`.
-- Current tuning model: symmetric inner X/Y ellipse + symmetric outer X + independent outer Up/Down radii + distance curve + 3D range + range-based bell size.
+- Version: `0.1.6-dev`
+- Current implementation head ready for in-game test: `21fdb0a1b583856a881603df1d70fc8c4fae07ed`.
+- Current tuning model: symmetric inner X/Y ellipse + symmetric outer X + independent outer Up/Down radii + uncapped user tuning values + distance curve + 3D range + range-based bell size.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `21fdb0a1b583856a881603df1d70fc8c4fae07ed` - Bump WanderingGaia to 0.1.6-dev.
+- `6d7edff9f2e9343c2aac7d5b82a922ce3314fce4` - Remove physical-screen and outer-vs-inner placement guardrails.
+- `9291456eec4bf50315d1e0d15f168cb823cc3742` - Remove arbitrary tuning value caps from normalization.
+- `a946c8e9137560db2038a7f758f481702701cd7a` - Document project rule: user-owned configuration values are not arbitrarily capped or silently clamped.
 - `2b91e0e8762606598a00ab882c98b49c7adc2c05` - Bump WanderingGaia to 0.1.5-dev.
 - `553016a2b10ecc60ddebec9583fd5e4ef1163f1a` - Split outer ellipse vertical tuning into independent Up/Down radii and migrate the old symmetric Y value.
 - `95c6f45139f7f4dee04ba2cb3088dfbec56511ee` - Add asymmetric outer ellipse labels and diagnostics strings.
@@ -36,13 +40,12 @@
 - `0.1.4-dev` first ellipse test: user reports the ellipse geometry removes the previous jitter and already feels intuitive.
 
 ## Implemented / Awaiting Test
-- `0.1.5-dev` asymmetric outer ellipse tuning model:
+- `0.1.6-dev` asymmetric outer ellipse tuning model:
   - `Origin X (%)` / `Origin Y (%)` move the visual player-origin relative to true UI centre.
   - `Inner X/Y` are ellipse radii as percentages of screen width/height and define the character exclusion zone.
   - `Outer X` is the shared left/right radius; `Outer Up` and `Outer Down` independently define the upper/lower vertical travel radii.
   - the bell starts on the inner ellipse at the minimum-range end of the curve and interpolates toward the outer ellipse according to the existing five-point distance curve.
   - the effective inner boundary expands by half the current bell size and the effective outer boundary contracts by half the bell size, so the bell graphic itself respects the configured ellipses rather than only its centre point.
-  - a final physical-screen clamp prevents deliberately extreme origin/ellipse settings from losing the bell off-screen.
   - opening `/wg config` shows a translucent filled inner ellipse, a dotted outer ellipse and an origin cross/label.
   - range calculation always uses XYZ distance when both Z values are available; there is no longer a user-facing Z toggle. If Z is unavailable, the runtime falls back to 2D and `/wg coords` reports that fallback.
   - horizontal screen direction still uses the existing relative 2D bearing because camera pitch/projection data is not available.
@@ -51,12 +54,13 @@
   - animation timing remains fixed at `0.07` seconds per sprite step.
   - settings persist in `WanderingGaiaDB`.
   - Existing `outerRadiusY` SavedVariables migrate into both Up and Down on first load, preserving current tuning.
+  - User-entered tuning values are no longer arbitrarily capped or silently reshaped; extreme values are preserved. Only the rendered bell size retains a positive floor because WoW frame dimensions must remain positive.
   - Copy settings exports `WGCFG` with `outer=X:up:down` plus origin, inner ellipse, curve, size and smoothing values.
 - `/wg coords [on|off]` reports XYZ positions/deltas, 2D/3D range and active range mode, bearing/facing, ellipse settings, curve percentage, bell size and final screen offset.
 - `/wg test [on|off]` remains the local target preview path.
 
 ## Current Issues
-- The asymmetric Outer Up/Down implementation is statically inspected but not yet tested in WoW.
+- `0.1.6-dev` uncapped tuning behaviour is statically inspected but not yet tested in WoW.
 - `0.1.3-dev` movable-origin testing was superseded by the requested ellipse model before a focused result was recorded.
 - Z is used for radial range but cannot be projected into vertical screen direction with the currently available camera data.
 - Character names/identifiers for the eventual two-user ring feature are not implemented yet.
@@ -70,12 +74,12 @@
 - New tuning requirement: inner ellipse can stay symmetric; outer X can stay symmetric left/right; outer Up and Down must be independently tunable.
 
 ### Next Test
-- Update through TocPilot to `0.1.5-dev` / `2b91e0e8762606598a00ab882c98b49c7adc2c05`.
+- Update through TocPilot to `0.1.6-dev` / `21fdb0a1b583856a881603df1d70fc8c4fae07ed`.
 - Tune Origin Y, Inner X/Y, Outer X, Outer Up and Outer Down.
 - Run `/wg test on` across bearings, ranges and height differences.
 - Confirm the bell remains outside the inner ellipse, follows the asymmetric outer boundary cleanly, normally reports 3D range, and retains natural range-based sizing.
 - Use Copy settings and paste the resulting `WGCFG` line back into chat so the tuned values can become install defaults.
-- Static verification completed: no stale runtime/config references to the old single `outerRadiusY`; no GitHub Actions/CI workflow exists in this repository.
+- Static verification completed: no stale runtime/config references to the old single `outerRadiusY`; arbitrary normalization caps, physical-screen placement clamp and outer-vs-inner auto-correction are removed; no GitHub Actions/CI workflow exists in this repository.
 
 ## Planned / To-do
 
@@ -104,7 +108,6 @@
 - Use a configurable outer travel boundary with symmetric left/right X radius and independent Up/Down Y radii.
 - Define ellipse radii as percentages of screen width/height.
 - Expand/contract effective ellipse intersections by bell half-size so the graphic itself respects the limits.
-- Retain a physical screen-edge clamp as a final safety guard only.
 
 ### 4. Blessing of Protection Gag
 - Implement only after the bell foundation is working.
@@ -128,4 +131,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-User-test `0.1.5-dev` / `2b91e0e8762606598a00ab882c98b49c7adc2c05`. Tune Origin Y, Inner X/Y, Outer X, Outer Up and Outer Down; run `/wg test on` across bearings/ranges/elevation; confirm the asymmetric outer boundary feels natural while 3D range and range-based sizing remain correct; then paste the copied `WGCFG` line back into chat to set final install defaults.
+User-test `0.1.6-dev` / `21fdb0a1b583856a881603df1d70fc8c4fae07ed`. Confirm values above the old limits (especially Outer Up > 50) are accepted unchanged, then tune Origin Y, Inner X/Y, Outer X, Outer Up and Outer Down; run `/wg test on` across bearings/ranges/elevation; confirm the asymmetric outer boundary feels natural while 3D range and range-based sizing remain correct; then paste the copied `WGCFG` line back into chat to set final install defaults.
