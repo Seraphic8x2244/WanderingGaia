@@ -3,7 +3,10 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.8-dev`
-- Latest handoff/test commit: `e55c712e1ce806cf0412732057deabc602eb7393`.
+- Latest dev handoff/test commit before release prep: `e55c712e1ce806cf0412732057deabc602eb7393`.
+- Release-prep documentation commit: `f7c403e491077b86dd2a4b289b4fa89d7abe81c2`.
+- Stable `main` release commit: `889a4a5daf1807e7a104b3eae413d26aa3468249` (`0.1.8`).
+- Stable promotion PR: `#1`, squash-merged.
 - Ring Bell implementation commit: `11f53ec97031b7f9463c8224d327110e0980cef4`.
 - Ring Bell locale commit: `1bbc32e33ce61dbb2311c8f8edb7fba8af4d6116`.
 - Solo-test plan/handoff pre-build commit: `d63ffc9f838bd4c7e522d59de42c0ea6e8d98afa`.
@@ -77,6 +80,14 @@
 - Before promotion, re-audit the real PARTY/RAID protocol against `pfUI_TankIcons`, remove all solo debug commands/state from the distributable build, retain `artwork/gaiasbell.wav`, and keep the user-tested geometry unchanged.
 - Stable target is `0.1.8` on `main`; `DEV_GUIDE.md`, `DEV_PROGRESS.md`, and dev-only simulation must not ship.
 
+## Stable 0.1.8
+- Stable `0.1.8` is now on `main`.
+- Stable tree contains only distributable runtime files/assets plus README; `DEV_GUIDE.md`, `DEV_PROGRESS.md`, and the solo `/wg debug` harness are excluded.
+- Stable TOC is `Interface: 11200`, title `WanderingGaia`, version `0.1.8`.
+- Runtime assets verified on `main`: `artwork/WanderingGaia_BellSwing_256x64.tga` and `artwork/gaiasbell.wav`.
+- Post-merge static checks confirm client mode defaults on, legacy Vanilla `SendAddonMessage` + `CHAT_MSG_ADDON`/legacy args are intact, and target-to-cancel is only invoked from `PLAYER_TARGET_CHANGED`.
+- Therefore a client who is already targeting the ringer when `RING:1` arrives still receives the ring; cancellation requires a later target-change event onto that ringer.
+
 ## Current Issues / Untested
 - `0.1.8-dev` has now passed the planned solo in-game test with no reported Lua errors.
 - Real cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and remote cancellation are intentionally untested before gifting.
@@ -100,4 +111,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Prepare the one-shot gift build: audit the real Vanilla communication path against `pfUI_TankIcons`, cleanly remove the solo simulation/debug harness without changing real Ring Bell behavior, produce stable `0.1.8` metadata, statically verify Lua 5.0 / Interface 11200 compatibility and the already-targeting-ringer edge case, then promote only the cleaned distributable files/assets to `main`. Real cross-client transport remains the single intentionally unverified runtime risk.
+Deliver/install stable `main` `0.1.8` for the surprise. Ensure the installed addon folder is named exactly `WanderingGaia`. The intended recipient should simply load the addon normally and remain in default client mode; the controller uses `/wg ringer` after grouping, targets the recipient, waits for the control bell to appear, then clicks it to send the first real ring. Do not make further pre-gift changes unless a concrete packaging/install issue is found. Real cross-client PARTY/RAID transport remains the only intentionally unverified runtime path; record the first real result after the surprise.
