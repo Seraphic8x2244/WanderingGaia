@@ -113,6 +113,9 @@ Before pushing:
 - Fix underlying causes rather than adding bandages, guards, retries or compatibility hacks.
 - If a workaround appears necessary, flag it to the user and explain the underlying issue.
 - Temporary workarounds require explicit agreement and must not replace a proper fix.
+- Do not add arbitrary protective caps, clamps or guardrails to user-configurable values. If a user chooses an extreme value, preserve it unless it makes the underlying operation structurally invalid or unsafe for execution.
+- Prefer transparent validation or an explicit error for genuinely invalid input over silently changing the user's value.
+- A UI value being unusual, visually off-screen, impractical or easy to misuse is not by itself a reason to clamp it.
 
 ## Testing
 
