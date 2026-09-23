@@ -3,9 +3,12 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.0-dev`
+- Implementation head ready for in-game test: `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a`
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
+- `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a` - Store bell runtime texture as uncompressed TGA.
+- `6a9743191248c5ed60a852da3dd5ded9a727df24` - Add uploaded bell runtime TGA to `artwork/`.
 - `0b793578eccb613a45fdf3350ab40e16efdf43e6` - Add local directional bell preview.
 - `b8c3f870cda6297eb70f904f65fffaabb651a196` - Add target preview locale strings.
 - `b16f92218b73f4f71fa7677dc9722297ccf6f0b3` - Plan local directional bell preview.
@@ -25,6 +28,7 @@
 - Development contract copied from VanillaTemplate without project-specific changes.
 - Initial feature scope agreed and recorded below.
 - Four-frame bell swing artwork approved by the user and committed as `artwork/WanderingGaia_BellSwing_256x64.png`.
+- Runtime bell texture committed as `artwork/WanderingGaia_BellSwing_256x64.tga` and statically verified as TGA image type 2 (uncompressed true-colour), 256x64, 32-bit.
 - No runtime behaviour has been user-tested yet.
 
 ## Implemented / Awaiting Test
@@ -51,8 +55,7 @@
 
 ## Current Issues
 - Character names/identifiers for the two intended users have not yet been added to implementation.
-- The local target-preview path is implemented but untested in game.
-- The committed bell PNG is source artwork; the 256x64 32-bit uncompressed TGA runtime texture has been prepared locally but still needs to be committed to `artwork/` before the preview can render in WoW 1.12.1.
+- The local target-preview path, ClassicAPI bearing/distance behaviour, safe-area placement and swing animation are implemented but untested in game.
 
 ## Testing
 
@@ -63,15 +66,15 @@
 - Not tested: All runtime behaviour.
 
 ### Next Test
-- Local target-preview smoke test after the TGA is committed:
-  - addon loads on WoW 1.12.1 without Lua errors;
-  - with ClassicAPI loaded, `/wgtest` enables the preview;
-  - no target hides the bell;
-  - selecting a visible target places the bell in the correct relative direction;
-  - turning in place moves the bell around the safe playfield appropriately;
-  - moving toward/away from the target changes radius according to the distance curve;
-  - the four-frame swing animates and mirrors correctly;
-  - `/wgtest off` hides the preview.
+- Local target-preview smoke test on implementation head `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a`:
+  - launch WoW 1.12.1 with WanderingGaia and ClassicAPI loaded and confirm there are no Lua errors;
+  - run `/wgtest on` with no target and confirm the bell remains hidden;
+  - select a visible target and confirm the bell appears in the correct relative direction;
+  - turn a full 360 degrees in place and confirm the bell tracks around the safe playfield without entering the excluded left 20%, right 20% or bottom 30% regions;
+  - move toward and away from the target and confirm the bell radius increases with distance, with effectively overlapping targets staying at the centre;
+  - watch at least one full swing cycle and confirm all four source frames appear and the opposite half-cycle mirrors correctly;
+  - run `/wgtest off` and confirm the bell hides immediately;
+  - record any Lua errors, reversed directions, bad safe-area placement, distance-curve problems or animation/texture artefacts before changing implementation.
 
 ## Planned / To-do
 
@@ -81,7 +84,7 @@
 - Clicking the bell sends a lightweight addon event to the recipient through a 1.12.1-compatible group channel.
 - The recipient displays a short bell visual and plays the bell sound locally.
 - No pseudo-security/authorized-ringer system; this is a personal addon, not an access-control mechanism.
-- Convert the approved bell source sprite to an in-game-compatible runtime texture before wiring the animation.
+- Keep the approved PNG as source artwork and the committed 256x64 32-bit uncompressed TGA as the WoW 1.12.1 runtime texture.
 
 ### 2. Direction and Distance Hint
 - Treat ClassicAPI as an optional enhancement, not a base dependency.
@@ -129,4 +132,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-Commit the prepared 256x64 32-bit uncompressed TGA runtime texture to `artwork/`, then user-test the existing `/wgtest` local target-preview harness in WoW 1.12.1 with ClassicAPI. Do not wire real ring communication until the local direction, distance, safe-area placement and animation are confirmed in game.
+User-test `/wgtest on` on implementation head `620f63b96afe1e20bfc0d32c0e29151f63ee1a3a` in WoW 1.12.1 with ClassicAPI: first verify no-target hiding, then target direction while rotating 360 degrees, distance-driven radius while moving toward/away, safe-area limits, the full mirrored four-frame swing, and finally `/wgtest off`. Report the observed behaviour and any Lua errors before changing code. Do not wire real ring communication until this local preview passes.
