@@ -3,8 +3,8 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.6-dev`
-- Current implementation head ready for in-game test: `21fdb0a1b583856a881603df1d70fc8c4fae07ed`.
-- Current tuning model: symmetric inner X/Y ellipse + symmetric outer X + independent outer Up/Down radii + uncapped user tuning values + distance curve + 3D range + range-based bell size.
+- Current implementation head before default-profile update: `21fdb0a1b583856a881603df1d70fc8c4fae07ed`.
+- Active change: promote the user-tested WGCFG profile to install defaults with Outer Up corrected to 60, and deliberately reset existing saved tuning once on upgrade.
 - Goal: Build WanderingGaia as a small personal WoW 1.12.1 addon with a directional "ring bell" aid first, followed by the Blessing of Protection gag as a separate feature slice.
 
 ## Recent Commits
@@ -69,6 +69,10 @@
 ## Testing
 
 ### Last Test
+- User supplied final tuning candidate: `minrange=0 origin=0:-10 inner=5:15 outer=40:60:25 curve=0:0,10:20,20:60,44:80,80:100 size=64:16 smooth=50`.
+- Requested next update behaviour: these values become defaults and existing saved tuning is wiped once so the new defaults actually load.
+
+### Previous Test
 - Version/state: `0.1.4-dev` / implementation baseline `49446d640b9bf658e98e08789919e3d2c166774f`.
 - Passed so far: user reports the ellipse model removes the previous jitter and feels intuitive immediately.
 - New tuning requirement: inner ellipse can stay symmetric; outer X can stay symmetric left/right; outer Up and Down must be independently tunable.
@@ -131,4 +135,4 @@
 - BoP/Cena implementation until the bell feature is working.
 
 ## Exact Next Step
-User-test `0.1.6-dev` / `21fdb0a1b583856a881603df1d70fc8c4fae07ed`. Confirm values above the old limits (especially Outer Up > 50) are accepted unchanged, then tune Origin Y, Inner X/Y, Outer X, Outer Up and Outer Down; run `/wg test on` across bearings/ranges/elevation; confirm the asymmetric outer boundary feels natural while 3D range and range-based sizing remain correct; then paste the copied `WGCFG` line back into chat to set final install defaults.
+Set the supplied tuning profile as `DEFAULT_SETTINGS` with Outer Up = 60. Add a one-time settings revision reset that replaces existing `WanderingGaiaDB` contents with defaults on upgrade, then persists normally afterward. Bump the dev version, static-check the reset/default paths, and hand back the new runtime commit for verification.
