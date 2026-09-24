@@ -19,11 +19,23 @@ local BOP = {
         [5599] = true,
         [10278] = true,
     },
+    ranks = {
+        [1022] = {
+            duration = 6.0,
+            sound = "Interface\\AddOns\\WanderingGaia\\artwork\\cena_r1.wav",
+        },
+        [5599] = {
+            duration = 8.0,
+            sound = "Interface\\AddOns\\WanderingGaia\\artwork\\cena_r2.wav",
+        },
+        [10278] = {
+            duration = 10.0,
+            sound = "Interface\\AddOns\\WanderingGaia\\artwork\\cena.wav",
+        },
+    },
     fallbackIcon = "Interface\\Icons\\Spell_Holy_SealOfProtection",
     glowTexture = "Interface\\Buttons\\UI-ActionButton-Border",
-    sound = "Interface\\AddOns\\WanderingGaia\\artwork\\cena.wav",
     auraWait = 1.5,
-    duration = 10.0,
     glowCycle = 0.80,
 }
 local POSITION_INTERVAL = 0.05
@@ -94,6 +106,7 @@ local bopPresentation = {
     pending = nil,
     active = false,
     startedAt = 0,
+    duration = 0,
 }
 local debugClients = {}
 local debugUnitOverrides = {}
@@ -728,6 +741,7 @@ local function StopBopPresentation()
     bopPresentation.pending = nil
     bopPresentation.active = false
     bopPresentation.startedAt = 0
+    bopPresentation.duration = 0
 
     if bopPresentation.frame then
         bopPresentation.frame:Hide()
@@ -766,22 +780,26 @@ local function FindBopAuraFromSender(sender)
 
     local i
     for i = 1, table.getn(BOP.spellIDs) do
-        local aura = C_UnitAuras.GetUnitAuraBySpellID("player", BOP.spellIDs[i], "HELPFUL")
+        local spellID = BOP.spellIDs[i]
+        local aura = C_UnitAuras.GetUnitAuraBySpellID("player", spellID, "HELPFUL")
 
         if BopAuraMatchesSender(aura, sender) then
-            return aura
+            return aura, spellID
         end
     end
 
     return nil
 end
 
-local function StartBopPresentation(aura)
+local function StartBopPresentation(aura, spellID)
     EnsureBopPresentation()
+
+    local rank = BOP.ranks[spellID] or BOP.ranks[10278]
 
     bopPresentation.pending = nil
     bopPresentation.active = true
     bopPresentation.startedAt = GetTime()
+    bopPresentation.duration = rank.duration
 
     bopPresentation.icon:SetTexture((aura and aura.icon) or BOP.fallbackIcon)
     bopPresentation.glow:SetWidth(96)
@@ -790,7 +808,7 @@ local function StartBopPresentation(aura)
     bopPresentation.frame:Show()
 
     if type(PlaySoundFile) == "function" then
-        PlaySoundFile(BOP.sound)
+        PlaySoundFile(rank.sound)
     end
 end
 
@@ -806,9 +824,9 @@ local function TryStartPendingBop()
         return
     end
 
-    local aura = FindBopAuraFromSender(pending.sender)
+    local aura, spellID = FindBopAuraFromSender(pending.sender)
     if aura then
-        StartBopPresentation(aura)
+        StartBopPresentation(aura, spellID)
         return
     end
 
@@ -840,7 +858,7 @@ local function UpdateBopPresentation()
     end
 
     local elapsed = GetTime() - bopPresentation.startedAt
-    if elapsed >= BOP.duration then
+    if elapsed >= bopPresentation.duration then
         StopBopPresentation()
         return
     end
