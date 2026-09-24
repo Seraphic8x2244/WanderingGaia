@@ -4,11 +4,11 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.10-dev`
+- Version: `0.2.3-dev`
 - Current runtime checkpoint: `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — BoP/Cena presentation now uses a self-contained pfUI-style repeated `zoomfade` icon pulse; `/wg debug cena [1|2|3]` remains mode-agnostic on dev and the real BoP path remains ringer -> client only.
 - Current `dev` head before this handoff update: `ae1fd178b001b7f68cd8c82dcd2fda71c5797548`; runtime remains `65ddb913d1ee3d88de2cfbbda7a31d665311364f`.
-- Stable runtime release: `0.1.10` at `76720d7c351160b80fffd87eeb8aba60079c298f`.
-- Current `main` head: `76720d7c351160b80fffd87eeb8aba60079c298f`.
+- Stable runtime release: `0.2.3` at `1ef7f3429cdee0d840f3c27418a332d4fafb92a9` (version-only bump from the accepted 0.1.10 runtime).
+- Current `main` head: `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`.
 - Goal: leave the accepted 0.1.10 surprise release stable, observe real use, and fix only demonstrated regressions. The remaining validation debt is the real two-client BoP cast/transport/auth/aura-verification path.
 - Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
 
@@ -73,6 +73,8 @@
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
 
 ## Recent Relevant Commits
+- `1ef7f3429cdee0d840f3c27418a332d4fafb92a9` — version-only stable bump from 0.1.10 to 0.2.3; runtime unchanged.
+- `785dffc5683d45b4439a6c24e8de0630194ae6e9` — version-only dev bump from 0.1.10-dev to 0.2.3-dev; runtime unchanged.
 - `76720d7c351160b80fffd87eeb8aba60079c298f` — stable 0.1.10 release commit on `main`; built directly on the previous main tree so README and main-only artwork were preserved while stable runtime blobs and the three Cena WAVs were applied.
 - `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — replace rejected action-button border pulse with repeated pfUI-style `zoomfade` icon animation; sound, placement, rank timing and real BoP gating unchanged.
 - `097483afb2fdc4dafdb00df4ebc4f122f0f04c33` — remove the debug-only client-mode guard so Cena presentation preview works while testing in `/wg ringer`; real BoP ringer/client gating is unchanged.
@@ -161,8 +163,8 @@ When practical, exercise the released 0.1.10 real two-client BoP path on WoW 1.1
 - Broader public/multi-user security model.
 
 ## Release / Promotion Notes
-- Latest stable runtime release is `0.1.10` at `76720d7c351160b80fffd87eeb8aba60079c298f`.
-- Current `main` head is the same `76720d7c...` release commit.
+- Latest stable runtime release is `0.2.3` at `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`; this is a version-only reclassification of the accepted Cena work into the 0.2.x line.
+- Current `main` head is `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`.
 - `main` and `dev` remain divergent histories. 0.1.10 was intentionally constructed directly on the existing main tree from checked stable blobs rather than merging dev, preserving main-only presentation content.
 - Main-only/presentation content to preserve:
   - current main `README.md` containing the artwork presentation;
