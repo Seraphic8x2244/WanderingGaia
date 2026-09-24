@@ -9,7 +9,7 @@
 - Current `dev` head before this handoff update: `ae1fd178b001b7f68cd8c82dcd2fda71c5797548`; runtime remains `65ddb913d1ee3d88de2cfbbda7a31d665311364f`.
 - Stable runtime release: `0.2.3` at `1ef7f3429cdee0d840f3c27418a332d4fafb92a9` (version-only bump from the accepted 0.1.10 runtime).
 - Current `main` head: `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`.
-- Goal: leave the accepted 0.1.10 surprise release stable, observe real use, and fix only demonstrated regressions. The remaining validation debt is the real two-client BoP cast/transport/auth/aura-verification path.
+- Goal: fix the demonstrated real-use BoP/Cena failure and persist the selected ringer/client mode across reloads/restarts, without changing proven Ring Bell behavior or broadening scope.
 - Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
 
 ## Current Design / Development Contract
@@ -19,7 +19,7 @@
 - Runtime remains a single main `WanderingGaia.lua` plus `locales/enUS.lua`; dev-only debug commands are integrated in the main file and must not ship in a stable build.
 - ClassicAPI supplies the position/facing data used by directional placement and the spellcast/aura data used by the BoP feature. The next runtime pass assumes both clients have ClassicAPI.
 - Addon communication deliberately uses the proven Vanilla path: `SendAddonMessage(prefix, payload, "RAID"/"PARTY")`, `CHAT_MSG_ADDON`, and legacy `arg1`/ `arg2`/ `arg4`; do not introduce `RegisterAddonMessagePrefix` or `C_ChatInfo`.
-- Runtime starts in client mode. `/wg ringer` and `/wg client` are mutually exclusive modes.
+- `/wg ringer` and `/wg client` are mutually exclusive modes. The user's selected mode must persist in `WanderingGaiaDB` across reloads/restarts; existing installs without a saved mode default to client.
 - The ringer owns discovered-client and outgoing-ring state; each client owns incoming-ring presentation state. Outgoing state is per recipient and incoming state is per sender, so simultaneous independent rings remain valid.
 
 ### Invariants
@@ -128,7 +128,8 @@
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- Stable 0.1.10 carries explicitly accepted validation debt: the real two-client BoP cast/transport/auth/aura-verification path has not been runtime-tested.
+- User reports the real BoP gag did not trigger on stable 0.2.3. This is now a demonstrated runtime failure, not merely validation debt; diagnose the actual ClassicAPI spellcast/aura path before changing gating semantics.
+- Runtime mode currently resets to client on every addon load because it is not persisted; user requires the selected ringer/client mode to save across reloads/restarts.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
 - No known failure is currently demonstrated in the released 0.1.10 runtime.
 
@@ -151,9 +152,9 @@ When practical, exercise the released 0.1.10 real two-client BoP path on WoW 1.1
 4. Record each observed runtime outcome separately from static/compiler checks before any release work.
 
 ## Planned / Next Work
-- Let the 0.1.10 surprise release run naturally.
-- When possible, test the released real two-client BoP positive/negative gating and record exact results.
-- Fix only demonstrated failures or regressions; do not broaden into deferred scope without a new decision.
+- Persist `runtimeMode` in `WanderingGaiaDB`, defaulting only previously-unsaved installs to client.
+- Trace the real ClassicAPI `UNIT_SPELLCAST_*` event argument contracts and aura-source fields against the current BoP sender/receiver implementation; fix the demonstrated failure at its actual gate.
+- Preserve all proven Ring Bell behavior and existing BoP recipient/auth invariants unless runtime/API evidence shows one is incorrect.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -177,4 +178,4 @@ When practical, exercise the released 0.1.10 real two-client BoP path on WoW 1.1
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-No further code change is required for the 0.1.10 surprise release. Let Gaia encounter the stable build naturally. When practical, runtime-test the released real two-client BoP positive/negative gating; if it exposes a failure, reproduce and fix only that demonstrated issue.
+On `dev` at current head `5062f4e6e21609853bd1cdf28760d1ec7f93239c`, first persist the selected runtime mode in `WanderingGaiaDB` without changing settings-revision behavior. In parallel, inspect ClassicAPI's actual Vanilla spellcast event signatures and aura metadata against `HandleBopSpellcastSent`, `HandleBopSpellcastResult`, and `FindBopAuraFromSender`; identify and fix the demonstrated real BoP/Cena failure with the smallest evidence-based change. Then run static checks and the real Lua 5.0.2 checker before asking for a focused two-client retest.
