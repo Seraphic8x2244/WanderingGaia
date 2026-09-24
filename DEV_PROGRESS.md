@@ -63,7 +63,7 @@
 ### Active Decisions
 - Sender control bell position mirrors the configured visual-origin Y offset; it animates only while the currently targeted recipient has an active outgoing ring and resets to frame 1 when inactive.
 - If local ringer position disappears after a usable endpoint was known, bearing continues from the recipient's live position/facing to the cached endpoint. If a ring starts with no usable endpoint yet, the existing non-directional origin fallback remains until usable local/remote position arrives.
-- BoP presentation is a 64 px aura icon at `UIParent CENTER`, X `-200`, Y `0`, with `Spell_Holy_SealOfProtection` fallback and pulsing additive `UI-ActionButton-Border` glow.
+- BoP presentation is a 64 px aura icon at `UIParent CENTER`, X `-200`, Y `0`, with `Spell_Holy_SealOfProtection` fallback. The earlier pulsing `UI-ActionButton-Border` approximation is rejected by the user. Replace it with pfUI's `zoomfade` action-button animation behavior: a duplicate of the current icon expands and fades, using pfUI's same per-frame fade/scale formula. Repeat that one-shot pulse for the BoP presentation lifetime; do not add a pfUI runtime dependency.
 - Vanilla `PlaySoundFile` cannot stop/fade an individual custom file, and ClassicAPI does not provide a per-file stop/fade backport. The uploaded source was therefore converted at `630676377e2c7ad3ce5a2219ee0dd31a4a0acb5a` into rank-specific PCM 16-bit mono 44.1 kHz WAVs and the MP3 source was removed:
   - spell 1022 / rank 1: `artwork/cena_r1.wav`, 6.5 s, fade from 6.0-6.5 s;
   - spell 5599 / rank 2: `artwork/cena_r2.wav`, 8.5 s, fade from 8.0-8.5 s;
@@ -178,4 +178,4 @@ Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAP
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-While remaining in `/wg ringer`, run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` and verify icon placement/size, proc glow, 6/8/10-second visual timing and the matching sound/fade behavior. Record those local runtime results here. After that, perform the real two-client BoP positive/negative gating tests before any release work.
+Replace the rejected BoP border pulse with a self-contained copy of pfUI's `zoomfade` icon animation behavior, repeated for the active BoP presentation lifetime while preserving icon placement, rank timing, audio, and real ringer -> client gating. Run the Lua 5.0.2/static checks, then test via `/wg debug cena 1|2|3` while staying in `/wg ringer`.
