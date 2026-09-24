@@ -34,9 +34,7 @@ local BOP = {
         },
     },
     fallbackIcon = "Interface\\Icons\\Spell_Holy_SealOfProtection",
-    glowTexture = "Interface\\Buttons\\UI-ActionButton-Border",
     auraWait = 1.5,
-    glowCycle = 0.80,
 }
 local POSITION_INTERVAL = 0.05
 local COORDS_INTERVAL = 0.10
@@ -102,7 +100,8 @@ local pendingBopCast = nil
 local bopPresentation = {
     frame = nil,
     icon = nil,
-    glow = nil,
+    animation = nil,
+    animationTexture = nil,
     pending = nil,
     active = false,
     startedAt = 0,
@@ -723,18 +722,22 @@ local function EnsureBopPresentation()
     icon:SetAllPoints(frame)
     icon:SetTexture(BOP.fallbackIcon)
 
-    local glow = frame:CreateTexture(nil, "OVERLAY")
-    glow:SetPoint("CENTER", frame, "CENTER", 0, 0)
-    glow:SetWidth(96)
-    glow:SetHeight(96)
-    glow:SetTexture(BOP.glowTexture)
-    glow:SetBlendMode("ADD")
-    glow:SetVertexColor(1.0, 0.82, 0.18)
-    glow:SetAlpha(1.0)
+    local animation = CreateFrame("Frame", "WanderingGaiaBopAnimation", frame)
+    animation:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    animation:SetWidth(frame:GetWidth())
+    animation:SetHeight(frame:GetHeight())
+    animation:SetScale(frame:GetScale())
+    animation:Hide()
+    animation.active = nil
+
+    local animationTexture = animation:CreateTexture(nil, "BACKGROUND")
+    animationTexture:SetAllPoints(animation)
+    animationTexture:SetTexture(BOP.fallbackIcon)
 
     bopPresentation.frame = frame
     bopPresentation.icon = icon
-    bopPresentation.glow = glow
+    bopPresentation.animation = animation
+    bopPresentation.animationTexture = animationTexture
 end
 
 local function StopBopPresentation()
@@ -742,6 +745,13 @@ local function StopBopPresentation()
     bopPresentation.active = false
     bopPresentation.startedAt = 0
     bopPresentation.duration = 0
+
+    if bopPresentation.animation then
+        bopPresentation.animation.active = nil
+        bopPresentation.animation:Hide()
+        bopPresentation.animation:SetAlpha(1)
+        bopPresentation.animation:SetScale(1)
+    end
 
     if bopPresentation.frame then
         bopPresentation.frame:Hide()
@@ -801,10 +811,11 @@ local function StartBopPresentation(aura, spellID)
     bopPresentation.startedAt = GetTime()
     bopPresentation.duration = rank.duration
 
-    bopPresentation.icon:SetTexture((aura and aura.icon) or BOP.fallbackIcon)
-    bopPresentation.glow:SetWidth(96)
-    bopPresentation.glow:SetHeight(96)
-    bopPresentation.glow:SetAlpha(1.0)
+    local iconTexture = (aura and aura.icon) or BOP.fallbackIcon
+    bopPresentation.icon:SetTexture(iconTexture)
+    bopPresentation.animationTexture:SetTexture(iconTexture)
+    bopPresentation.animation.active = 0
+    bopPresentation.animation:Show()
     bopPresentation.frame:Show()
 
     if type(PlaySoundFile) == "function" then
@@ -863,14 +874,25 @@ local function UpdateBopPresentation()
         return
     end
 
-    local cycle = elapsed - (math.floor(elapsed / BOP.glowCycle) * BOP.glowCycle)
-    local normalized = cycle / BOP.glowCycle
-    local pulse = 1 - math.abs((normalized * 2) - 1)
-    local glowSize = 88 + (pulse * 16)
+    local animation = bopPresentation.animation
 
-    bopPresentation.glow:SetWidth(glowSize)
-    bopPresentation.glow:SetHeight(glowSize)
-    bopPresentation.glow:SetAlpha(0.45 + (pulse * 0.55))
+    if animation.active == 0 then
+        animation:SetWidth(bopPresentation.frame:GetWidth())
+        animation:SetHeight(bopPresentation.frame:GetHeight())
+        animation:SetScale(bopPresentation.frame:GetScale())
+        animation:SetAlpha(1)
+        animation.active = 1
+        animation:Show()
+    elseif animation.active == 1 then
+        local fade = 30 / GetFramerate() * 0.05
+        animation:SetAlpha(animation:GetAlpha() - fade)
+        animation:SetScale(animation:GetScale() + fade)
+
+        if animation:GetAlpha() <= 0 then
+            animation.active = 0
+            animation:Hide()
+        end
+    end
 end
 
 local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
