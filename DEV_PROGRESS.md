@@ -1,14 +1,12 @@
 # Development Progress
 
 ## Resume Status — 2026-09-24
-- Branch: `dev`; resume baseline/head before this session's edits: `3c86439694b712ebfebb8e3a5ba5f66f7bf66852`.
-- Version: `0.1.9-dev`.
-- Stable runtime baseline remains `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`; current `main` is two presentation-only commits ahead (README plus `artwork/wanderinggaia2.png`), with head `8e4926cdb30042d2e025209262236bbce5f8fa2a`.
-- Completed this session before implementation: confirmed supplied `dev` handoff exactly matches branch head; confirmed the documented Ring Bell 0.1.9 protocol/refinement code is the implementation baseline to audit; confirmed no Cena audio asset is currently present in repo/conversation files.
-- Runtime verification status: the repository handoff still records the 0.1.9 two-client refinement pass as awaiting a separate in-game verification. This session can statically verify those paths but must not claim a real two-client pass without user/runtime evidence.
-- Untested/new work: Blessing of Protection/Cena slice is not yet implemented or in-game tested at this checkpoint.
-- Deferred remains unchanged: geometry retuning, options/minimap/framework work, and broader public/multi-user security design.
-- Exact next step: statically audit the 0.1.9 sender-bell/re-ring/right-click/POSQ/POS paths against the documented behavior, then implement only the documented BoP/Cena slice on `dev`; preserve the real two-client runtime-verification distinction in the handoff.
+- Branch: `dev`; baseline before this continuation: `3b9f4e78b4725a18b25bb416a8a6e1d7318d7aa6`.
+- Version: `0.1.10-dev`.
+- Added `artwork/cena.wav` on `dev` at `5b234923f9e3f416c69178669989fa3f6ea7e3cf` as an original functional runtime cue: RIFF/WAVE PCM, 44.1 kHz, mono, 16-bit, 1.55 s. The committed blob was read back and its WAV header verified.
+- Post-asset static verification remains clean: the asset-only commit does not modify `WanderingGaia.lua` or the inherited Ring Bell / BoP logic; no forbidden modern comm/timer APIs were found; all `L.*` references resolve in `locales/enUS.lua`; approximate top-level local count remains 142.
+- Real two-client runtime verification is still distinct and **not completed** in this continuation because this chat has no access to running WoW 1.12.1 clients. No in-game result is being inferred from static checks.
+- No stable-promotion or other release work has been started.
 
 ## Current
 - Branch: `dev`
@@ -17,6 +15,7 @@
 - Blessing of Protection/Cena implementation: `e4696b7780176fccf8cb7922858839ea103a7eff`.
 - `0.1.10-dev` version bump: `670e081b2ad23cda64122006999c265ae778fd9c`.
 - Latest dev handoff/test commit before release prep: `e55c712e1ce806cf0412732057deabc602eb7393`.
+- Cena runtime audio cue: `5b234923f9e3f416c69178669989fa3f6ea7e3cf`.
 - Release-prep documentation commit: `f7c403e491077b86dd2a4b289b4fa89d7abe81c2`.
 - `0.1.9-dev` Ring Bell refinement implementation: `7d21ab0189db669cc8a294f7a400deed048fe397`.
 - Stale-position lifetime cleanup: `3c92f85ed07cc16a9147ffed710d570024ebfe86`.
@@ -209,11 +208,12 @@
   - `PlaySoundFile("Interface\\AddOns\\WanderingGaia\\artwork\\cena.wav")` starts with the visual;
   - visual/glow lifetime is exactly 10 seconds.
 - Expected negative cases are enforced in code: failed/interrupted attempts do not send; undiscovered/non-group/wrong recipients do not send; non-client/wrong-recipient/non-ringer messages do not present; a BoP aura from a different caster does not satisfy verification.
-- Runtime prerequisite still missing: `artwork/cena.wav` is referenced but is not currently present in the repository or available conversation files. The sound path therefore cannot be tested yet.
+- Runtime audio prerequisite is now present: `artwork/cena.wav` was added at `5b234923f9e3f416c69178669989fa3f6ea7e3cf` as an original functional test cue (PCM 16-bit mono 44.1 kHz, 1.55 s). It is suitable for verifying the addon sound path; it is not evidence that the in-game presentation has run successfully.
 - Static checks after implementation:
   - no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or other modern communication/timer dependency introduced;
   - approximately 142 top-level locals, still below the Vanilla Lua chunk-local limit;
   - final implementation diff is limited to `WanderingGaia.lua` plus the `0.1.10-dev` TOC bump.
+- Post-asset verification: `3b9f4e78...5b234923` contains exactly one changed path, `artwork/cena.wav`; runtime Lua/TOC/locales are unchanged by the asset commit. The committed WAV header reads RIFF/WAVE, PCM format 1, 1 channel, 44100 Hz, 16 bits/sample.
 - Entire 0.1.10 BoP/Cena slice remains **awaiting in-game two-client testing**.
 
 ## Deferred
@@ -222,4 +222,9 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Add the intended `artwork/cena.wav` asset, then run a real two-client `0.1.10-dev` pass. First re-check the inherited 0.1.9 Ring Bell refinements (sender-bell mirrored position/animation, left re-ring throttle, immediate right-click stop, and long-range `POSQ`/`POS`). Then test BoP from the ringer to a positively discovered client: successful BoP should produce the verified BoP icon at X -200 / Y 0, Vanilla action-button-style proc glow and Cena audio for the intended 10-second presentation; failed/interrupted BoP, a different paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation. Record the actual in-game outcomes separately from static checks before any stable promotion.
+Run the real two-client `0.1.10-dev` pass on actual WoW 1.12.1 clients with ClassicAPI, and record the observed in-game results here before any release work:
+
+1. Re-check inherited 0.1.9 Ring Bell refinements: mirrored sender-bell position, active/inactive animation behavior, left-click re-ring with the 3.14 s per-recipient throttle, immediate right-click stop, long-range local-position loss, one-per-second `POSQ`, matching `POS` replies, and return to live local position when available again.
+2. Test the BoP/Cena positive path from a `/wg ringer` to a positively discovered client: a successful Blessing of Protection should yield the verified BoP icon at X -200 / Y 0, pulsing Vanilla action-button-style glow, `artwork/cena.wav` playback, and a 10-second presentation.
+3. Test BoP negatives separately: failed cast, interrupted cast, different paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation.
+4. Keep runtime outcomes under a dedicated real two-client result section; do not promote static inspection, protocol review, or asset validation to user-tested status.
