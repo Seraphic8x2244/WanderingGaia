@@ -8,7 +8,7 @@
 - Development/runtime head verified before this documentation-only workflow migration: `597b076d2c3df4cd35c9dca52f517538b728c604`. The migration itself must not change runtime files.
 - Stable runtime baseline: `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`.
 - Current `main` head: `8e4926cdb30042d2e025209262236bbce5f8fa2a` (still `0.1.9`; later commits are presentation-only).
-- Goal: run the real two-client verification pass for the inherited 0.1.9 Ring Bell refinements and the 0.1.10 BoP/Cena slice, then fix only demonstrated runtime issues before any release work.
+- Goal: complete the remaining real two-client verification for the 0.1.10 BoP/Cena slice, then fix only demonstrated runtime issues before any release work.
 - Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
 
 ## Current Design / Development Contract
@@ -67,7 +67,8 @@
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
 
 ## Recent Relevant Commits
-- `597b076d2c3df4cd35c9dca52f517538b728c604` — pre-migration runtime-test handoff; current runtime implementation baseline.
+- `af5a03f98cafb7c3424bcefe2551ffe64fa5db94` — VanillaTemplate workflow migration; documentation-only, with runtime files unchanged from `597b076d2c3df4cd35c9dca52f517538b728c604`.
+- `597b076d2c3df4cd35c9dca52f517538b728c604` — runtime implementation baseline for the current `0.1.10-dev` test build.
 - `5b234923f9e3f416c69178669989fa3f6ea7e3cf` — add `artwork/cena.wav`.
 - `e4696b7780176fccf8cb7922858839ea103a7eff` — implement Blessing of Protection/Cena presentation.
 - `670e081b2ad23cda64122006999c265ae778fd9c` — bump development version to `0.1.10-dev`.
@@ -80,20 +81,15 @@
 - Stable `0.1.8` at `889a4a5daf1807e7a104b3eae413d26aa3468249` was exercised in the real two-client gift use: cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and recipient cancellation worked.
 - The earlier solo client pass also exercised local ringer/client UI state, `gaiasbell.wav`, directional/distance placement, ring-off, and target-to-cancel behavior without reported Lua errors.
 - Approved runtime assets include `artwork/WanderingGaia_BellSwing_256x64.tga` and `artwork/gaiasbell.wav`.
+- Real two-client `0.1.10-dev` Ring Bell refinement pass: user reports the complete Ring Bell test set working as expected, including at extreme distances. This verifies mirrored sender-control placement, active/inactive animation behavior, left re-ring/throttle behavior, immediate right-click stop, long-range position loss/refresh behavior, `POSQ`/`POS` recovery, and return to live positioning in the target environment.
 
 ## Implemented / Awaiting Runtime Test
-- The current 0.1.10-dev build inherits the released 0.1.9 Ring Bell refinements, but that refinement delta has never received its own separate real two-client verification:
-  - mirrored sender-control position;
-  - active-only sender animation / inactive frame reset;
-  - per-recipient left-click re-ring throttle and immediate right-click stop;
-  - last-known long-range endpoint behavior;
-  - `POSQ`/`POS` remote position refresh and return to live local position.
 - The 0.1.10 BoP/Cena slice is implemented but has not been exercised in game:
   - successful-cast gating and negative cast-result handling;
   - discovered-client/ringer/group/recipient checks;
   - matching-aura caster verification;
   - icon/glow/sound presentation and 10-second lifetime.
-- The complete 0.1.10 two-client pass remains outstanding. Static inspection or the presence of `cena.wav` is not runtime verification.
+- Ring Bell verification is complete; the remaining `0.1.10-dev` runtime debt is the BoP/Cena slice. Static inspection or the presence of `cena.wav` is not runtime verification.
 
 ## Static / Automated Checks
 - 0.1.9 Ring Bell audit confirmed the documented mirrored control placement, active-only animation, 3.14-second per-recipient re-ring throttle, immediate right-click stop, local-position-first behavior, one-per-second `POSQ`, and active-ring-gated `POS` replies.
@@ -104,27 +100,26 @@
 - No GitHub Actions/CI workflow exists. Static inspection is not an in-game test.
 
 ## Current Issues
-- No real two-client runtime evidence yet exists for the 0.1.9 refinement delta or the 0.1.10 BoP/Cena delta.
+- The 0.1.9 Ring Bell refinement delta now has real two-client runtime evidence, including extreme-distance behavior. The 0.1.10 BoP/Cena delta still has no runtime evidence.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
 - The current `cena.wav` is a functional cue, not a confirmed specific source recording.
 
 ## Testing
 
 ### Last Runtime Test
-- Version/commit: stable `0.1.8`, release commit `889a4a5daf1807e7a104b3eae413d26aa3468249`.
-- Passed: real two-client discovery, PARTY/RAID transport, remote ring delivery and recipient cancellation; previously tested local sound/UI/geometry behavior remained good.
-- Failed: none recorded.
-- Not tested in that build: the later 0.1.9 sender-control/long-range refresh refinements and all 0.1.10 BoP/Cena behavior.
+- Version/commit: `0.1.10-dev`; branch head at the test checkpoint was `af5a03f98cafb7c3424bcefe2551ffe64fa5db94`, whose runtime files are unchanged from implementation baseline `597b076d2c3df4cd35c9dca52f517538b728c604`.
+- Passed: real two-client Ring Bell refinement set, reported working as expected even across extreme distances. This covers mirrored sender-bell placement, active/inactive animation, left re-ring/throttle, immediate right-click stop, long-range position handling, `POSQ`/`POS`, and recovery to live positioning.
+- Failed: none reported for the Ring Bell pass.
+- Not tested in this result: the 0.1.10 BoP/Cena positive and negative paths.
 
 ### Next Runtime Test
-Run a real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
-1. Ring Bell: verify mirrored sender-bell position; active/inactive animation state; left re-ring with the 3.14-second per-recipient throttle; immediate right-click stop; long-range local-position loss; one-per-second `POSQ`; matching `POS` replies; and automatic return to live local position.
-2. BoP positive path: from `/wg ringer`, cast successful BoP on a positively discovered client. The client should show the verified BoP icon at X `-200` / Y `0`, pulsing Vanilla action-button-style glow, play `artwork/cena.wav`, and keep the presentation for 10 seconds.
-3. BoP negatives: failed cast, interrupted cast, another paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation.
-4. Record each observed runtime outcome separately from static checks before any release work.
+Continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
+1. BoP positive path: from `/wg ringer`, cast successful BoP on a positively discovered client. The client should show the verified BoP icon at X `-200` / Y `0`, pulsing Vanilla action-button-style glow, play `artwork/cena.wav`, and keep the presentation for 10 seconds.
+2. BoP negatives: failed cast, interrupted cast, another paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation.
+3. Record each observed runtime outcome separately from static checks before any release work.
 
 ## Planned / Next Work
-- Run the documented two-client pass and record exact results against the tested commit.
+- Complete the BoP/Cena portion of the documented two-client pass and record exact results against the tested commit.
 - Fix only demonstrated failures or regressions, then rerun the affected test.
 - If the 0.1.10 runtime delta is accepted, prepare release only after explicit release work begins; do not silently promote from the current testing step.
 - If a specific Cena clip is desired, replace the functional cue and retest the sound path before release.
@@ -151,4 +146,4 @@ Run a real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both cl
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Run the documented real two-client `0.1.10-dev` pass for the inherited 0.1.9 Ring Bell refinements and the 0.1.10 BoP/Cena positive/negative cases, then record the exact in-game outcomes in this file before any release work.
+Continue the real two-client `0.1.10-dev` pass with the BoP/Cena positive path and negative cases, then record those exact in-game outcomes here before any release work.
