@@ -147,7 +147,8 @@
 
 ### Last Runtime Test
 - Version/commit: `0.2.5-dev` / runtime checkpoint `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e`.
-- Mixed result: a real two-client BoP gag fired successfully on the dev build in one test, then a later real BoP did not fire; that miss happened during combat, but combat causation is unproven.
+- Real BoP transport/presentation passed: Gaia saw the icon, and sender-side debug output showed the BoP path completed.
+- Failed/uncertain: Gaia reported no Cena audio for that cast. This narrows the remaining issue to client-side sound playback or asset/rank selection, not BoP transport/gating.
 - Stable 0.2.4 at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38` had failed the same positive path.
 - Mode persistence result was not separately reported.
 - Earlier presentation-only debug test remains passed: pfUI-style animation runs, sound is good, and location is correct.
@@ -156,12 +157,12 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-Use dev 0.2.5-dev on both clients with `/wg debug boptrace on` enabled on both. Keep sender `/wg ringer` and recipient `/wg client`, then capture any failing BoP. Collect every `WanderingGaia BoP trace:` line from both clients. The trace must distinguish sender SENT/result/send from receiver receipt/known-ringer/aura/source verification before any further code change.
+Focus on Gaia's client only. Verify which BoP rank fired, which Cena WAV path that rank selects, whether `/wg debug cena <rank>` on Gaia plays audio locally, and whether the ordinary Ring Bell sound still plays on the same client. Do not change BoP transport/gating unless new evidence contradicts the now-working icon path.
 
 ## Planned / Next Work
-- Do not promote 0.2.5 yet: the real BoP path is intermittent and has now failed during combat.
-- Reproduce one combat failure with dev-only BoP tracing on both clients and identify the exact failing gate.
-- Fix only the demonstrated intermittent failure and preserve proven Ring Bell behavior plus existing BoP recipient/auth invariants unless trace/API evidence shows one is wrong.
+- Treat BoP transport/gating as working unless new evidence shows otherwise.
+- Diagnose Gaia-side Cena audio only: rank-selected WAV path, asset presence, and local PlaySoundFile behavior versus the already-proven bell sound.
+- Fix only the demonstrated audio issue; preserve the now-working BoP sender/receiver/auth path.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -185,4 +186,4 @@ Use dev 0.2.5-dev on both clients with `/wg debug boptrace on` enabled on both. 
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Reproduce one real BoP failure on dev 0.2.5-dev with `/wg debug boptrace on` enabled on both clients. Capture all `WanderingGaia BoP trace:` lines from sender and recipient. Use that evidence to identify whether the intermittent failure is cast pairing/send, transport/role gating, or aura/source timing before changing code or promoting stable.
+Inspect the current rank-to-WAV mapping and PlaySoundFile calls on dev, then run a focused Gaia-side audio test: `/wg debug cena 1`, `2`, and `3` locally on her client and confirm whether each rank produces sound while the icon appears. Also verify the normal Ring Bell sound on her client. Use those results to distinguish missing/invalid Cena asset playback from a broader client sound-setting issue before changing runtime logic.
