@@ -101,13 +101,12 @@
 - Real two-client `0.1.10-dev` Ring Bell refinement pass: user reports the complete Ring Bell test set working as expected, including at extreme distances. This verifies mirrored sender-control placement, active/inactive animation behavior, left re-ring/throttle behavior, immediate right-click stop, long-range position loss/refresh behavior, `POSQ`/`POS` recovery, and return to live positioning in the target environment.
 
 ## Implemented / Awaiting Runtime Test
-- The dev-only `/wg debug cena [1|2|3]` presentation test is implemented and statically/compiler checked. The earlier border-pulse visual was user-exercised and rejected; the replacement pfUI-style `zoomfade` visual has not yet been user-tested.
-- The 0.1.10 BoP/Cena slice is implemented but has not been exercised in game:
+- The dev-only `/wg debug cena [1|2|3]` presentation path has now been user-tested on the current pfUI-style `zoomfade` runtime. User reports the animation works, sound is good, and location is fine; although it was not initially the exact expected effect, the user subsequently accepted it for the 0.1.10 surprise release.
+- The 0.1.10 BoP/Cena presentation/audio slice is locally user-tested and accepted via `/wg debug cena`; the following real two-client gates remain implemented but untested:
   - successful-cast gating and negative cast-result handling;
   - discovered-client/ringer/group/recipient checks;
-  - matching-aura caster verification;
-  - rank-aware icon/glow/sound presentation: 6/8/10-second visual lifetime with matching 6.5/8.5/10.5-second audio assets and final 0.5-second baked fade.
-- Ring Bell verification is complete; the remaining `0.1.10-dev` runtime debt is the BoP/Cena slice. Static inspection or the presence of `cena.wav` is not runtime verification.
+  - matching-aura caster verification.
+- Ring Bell verification is complete and the current BoP/Cena presentation/audio path is locally user-tested. Remaining `0.1.10-dev` runtime debt is the real two-client BoP cast/transport/auth/aura-verification path.
 
 ## Static / Automated Checks
 - 0.1.9 Ring Bell audit confirmed the documented mirrored control placement, active-only animation, 3.14-second per-recipient re-ring throttle, immediate right-click stop, local-position-first behavior, one-per-second `POSQ`, and active-ring-gated `POS` replies.
@@ -131,10 +130,10 @@
 ## Testing
 
 ### Last Runtime Test
-- Version/commit: `0.1.10-dev`; branch head at the test checkpoint was `af5a03f98cafb7c3424bcefe2551ffe64fa5db94`, whose runtime files are unchanged from implementation baseline `597b076d2c3df4cd35c9dca52f517538b728c604`.
-- Passed: real two-client Ring Bell refinement set, reported working as expected even across extreme distances. This covers mirrored sender-bell placement, active/inactive animation, left re-ring/throttle, immediate right-click stop, long-range position handling, `POSQ`/`POS`, and recovery to live positioning.
-- Failed: none reported for the Ring Bell pass.
-- Not tested in this result: the 0.1.10 BoP/Cena positive and negative paths.
+- Version/runtime commit: `0.1.10-dev` / `65ddb913d1ee3d88de2cfbbda7a31d665311364f`.
+- Passed locally through `/wg debug cena`: pfUI-style BoP icon animation runs, Cena sound is good, and presentation location is correct. User accepts the current animation for release.
+- Previously passed on the same 0.1.10 line: complete real two-client Ring Bell refinement set, including extreme-distance behavior, mirrored sender-bell placement, active/inactive animation, left re-ring/throttle, immediate right-click stop, `POSQ`/`POS`, and recovery to live positioning.
+- Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
 First do the local presentation pass on the current `0.1.10-dev` runtime while staying in whichever mode is convenient for testing (including `/wg ringer`):
