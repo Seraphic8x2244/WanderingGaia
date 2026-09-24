@@ -109,6 +109,7 @@ local bopPresentation = {
 }
 local debugClients = {}
 local debugUnitOverrides = {}
+local debugBopTrace = false
 local controlButton = nil
 local controlTexture = nil
 local controlAnimationElapsed = 0
@@ -149,6 +150,12 @@ bellTexture:SetTexture(BELL_TEXTURE)
 local function PrintMessage(message)
     if DEFAULT_CHAT_FRAME and message then
         DEFAULT_CHAT_FRAME:AddMessage(message)
+    end
+end
+
+local function TraceBop(message)
+    if debugBopTrace then
+        PrintMessage(string.format(L.DEBUG_BOP_TRACE, message))
     end
 end
 
@@ -840,18 +847,58 @@ local function TryStartPendingBop()
         return
     end
 
-    if not knownRingers[pending.sender] or not GroupUnitForName(pending.sender) then
+    local grouped = GroupUnitForName(pending.sender) and true or false
+    if not knownRingers[pending.sender] or not grouped then
+        TraceBop(string.format(
+            "PENDING rejected sender=%s knownRinger=%s grouped=%s",
+            tostring(pending.sender),
+            knownRingers[pending.sender] and "yes" or "no",
+            grouped and "yes" or "no"
+        ))
         bopPresentation.pending = nil
         return
     end
 
     local aura, spellID = FindBopAuraFromSender(pending.sender)
     if aura then
+        TraceBop(string.format(
+            "AURA accepted sender=%s spell=%s sourceUnit=%s sourceGUID=%s",
+            tostring(pending.sender),
+            tostring(spellID),
+            tostring(aura.sourceUnit),
+            tostring(aura.sourceGUID)
+        ))
         StartBopPresentation(aura, spellID)
         return
     end
 
     if GetTime() >= pending.expiresAt then
+        if debugBopTrace then
+            local i
+            for i = 1, table.getn(BOP.spellIDs) do
+                local traceSpellID = BOP.spellIDs[i]
+                local traceAura = nil
+                if type(C_UnitAuras) == "table"
+                    and type(C_UnitAuras.GetUnitAuraBySpellID) == "function"
+                then
+                    traceAura = C_UnitAuras.GetUnitAuraBySpellID("player", traceSpellID, "HELPFUL")
+                end
+
+                local sourceName = nil
+                if traceAura and traceAura.sourceUnit and UnitExists(traceAura.sourceUnit) then
+                    sourceName = UnitName(traceAura.sourceUnit)
+                end
+
+                TraceBop(string.format(
+                    "AURA timeout spell=%s present=%s sourceUnit=%s sourceName=%s sourceGUID=%s",
+                    tostring(traceSpellID),
+                    traceAura and "yes" or "no",
+                    traceAura and tostring(traceAura.sourceUnit) or "nil",
+                    tostring(sourceName),
+                    traceAura and tostring(traceAura.sourceGUID) or "nil"
+                ))
+            end
+        end
         bopPresentation.pending = nil
     end
 end
@@ -909,13 +956,28 @@ local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
     pendingBopCast = nil
 
     spellID = tonumber(spellID)
+    local isBop = spellID and BOP.spellIDSet[spellID]
+    if isBop then
+        TraceBop(string.format(
+            "SENT unit=%s target=%s guid=%s spell=%s mode=%s",
+            tostring(unit),
+            tostring(target),
+            tostring(castGUID),
+            tostring(spellID),
+            tostring(runtimeMode)
+        ))
+    end
+
     if runtimeMode ~= "ringer"
         or unit ~= "player"
         or not spellID
-        or not BOP.spellIDSet[spellID]
+        or not isBop
         or not target
         or target == ""
     then
+        if isBop then
+            TraceBop("SENT rejected before target resolution")
+        end
         return
     end
 
@@ -924,7 +986,14 @@ local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
         targetName = UnitName(target)
     end
 
-    if not knownClients[targetName] or not GroupUnitForName(targetName) then
+    local grouped = GroupUnitForName(targetName) and true or false
+    if not knownClients[targetName] or not grouped then
+        TraceBop(string.format(
+            "SENT rejected targetName=%s discovered=%s grouped=%s",
+            tostring(targetName),
+            knownClients[targetName] and "yes" or "no",
+            grouped and "yes" or "no"
+        ))
         return
     end
 
@@ -933,31 +1002,65 @@ local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
         castGUID = castGUID,
         spellID = spellID,
     }
+    TraceBop(string.format(
+        "SENT armed target=%s guid=%s spell=%s",
+        tostring(targetName),
+        tostring(castGUID),
+        tostring(spellID)
+    ))
 end
 
 local function HandleBopSpellcastResult(succeeded, unit, castGUID, spellID)
     local pending = pendingBopCast
+    spellID = tonumber(spellID)
+
+    if spellID and BOP.spellIDSet[spellID] then
+        TraceBop(string.format(
+            "RESULT succeeded=%s unit=%s guid=%s spell=%s pending=%s",
+            succeeded and "yes" or "no",
+            tostring(unit),
+            tostring(castGUID),
+            tostring(spellID),
+            pending and "yes" or "no"
+        ))
+    end
 
     if not pending or unit ~= "player" then
         return
     end
 
-    spellID = tonumber(spellID)
     if castGUID ~= pending.castGUID or spellID ~= pending.spellID then
+        TraceBop(string.format(
+            "RESULT mismatch pendingGuid=%s pendingSpell=%s",
+            tostring(pending.castGUID),
+            tostring(pending.spellID)
+        ))
         return
     end
 
     pendingBopCast = nil
 
+    local grouped = GroupUnitForName(pending.target) and true or false
     if not succeeded
         or runtimeMode ~= "ringer"
         or not knownClients[pending.target]
-        or not GroupUnitForName(pending.target)
+        or not grouped
     then
+        TraceBop(string.format(
+            "RESULT rejected mode=%s discovered=%s grouped=%s",
+            tostring(runtimeMode),
+            knownClients[pending.target] and "yes" or "no",
+            grouped and "yes" or "no"
+        ))
         return
     end
 
-    SendComm("BOP:" .. pending.target)
+    local sent = SendComm("BOP:" .. pending.target)
+    TraceBop(string.format(
+        "SEND BOP:%s result=%s",
+        tostring(pending.target),
+        sent and "yes" or "no"
+    ))
 end
 
 local function ResolveIncomingUnit(sender)
@@ -1366,11 +1469,23 @@ local function ProcessCommMessage(sender, message, simulated)
 
     local _, _, bopRecipient = string.find(message, "^BOP:(.+)$")
     if bopRecipient then
+        TraceBop(string.format(
+            "RECV BOP sender=%s recipient=%s player=%s mode=%s knownRinger=%s grouped=%s",
+            tostring(sender),
+            tostring(bopRecipient),
+            tostring(playerName),
+            tostring(runtimeMode),
+            knownRingers[sender] and "yes" or "no",
+            GroupUnitForName(sender) and "yes" or "no"
+        ))
         if runtimeMode == "client"
             and bopRecipient == playerName
             and knownRingers[sender]
         then
+            TraceBop("RECV accepted; queueing aura verification")
             QueueIncomingBop(sender)
+        else
+            TraceBop("RECV rejected by recipient/mode/ringer gate")
         end
         return
     end
@@ -2361,6 +2476,16 @@ local function HandleDebugCommand(remainder)
 
         StartBopPresentation({ icon = BOP.fallbackIcon }, BOP.spellIDs[rank])
         PrintMessage(string.format(L.DEBUG_CENA_STARTED, rank))
+    elseif command == "boptrace" then
+        if argument == "on" then
+            debugBopTrace = true
+            PrintMessage(L.DEBUG_BOP_TRACE_ENABLED)
+        elseif argument == "off" then
+            debugBopTrace = false
+            PrintMessage(L.DEBUG_BOP_TRACE_DISABLED)
+        else
+            PrintMessage(L.DEBUG_BOP_TRACE_HELP)
+        end
     elseif command == "clear" then
         DebugClear()
     elseif command == "state" then
