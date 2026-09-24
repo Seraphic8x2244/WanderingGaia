@@ -1,0 +1,27 @@
+name: One-shot Lua 5.0.2 check
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/workflows/lua50-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: addon
+      - uses: actions/checkout@v4
+        with:
+          repository: Seraphic8x2244/VanillaTemplate
+          ref: dev
+          path: template
+      - name: Run real Lua 5.0.2 compiler check
+        run: bash template/tools/lua50/check_lua50.sh addon
