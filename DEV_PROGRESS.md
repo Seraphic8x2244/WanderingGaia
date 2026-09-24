@@ -5,10 +5,11 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.10-dev`
-- Development/runtime head verified before this documentation-only workflow migration: `597b076d2c3df4cd35c9dca52f517538b728c604`. The migration itself must not change runtime files.
+- Current runtime implementation commit: `3fa99999fdc6862ae384482dcad9501e0c2dc616`.
+- Current `dev` head before this handoff documentation update: `75e47b4e246cb42884421934061af61d91a5e5f8`; temporary conversion/check workflows have been removed.
 - Stable runtime baseline: `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`.
 - Current `main` head: `8e4926cdb30042d2e025209262236bbce5f8fa2a` (still `0.1.9`; later commits are presentation-only).
-- Goal: replace the temporary Cena cue with the uploaded real source converted to WoW-compatible rank-timed WAV assets, make BoP presentation duration rank-aware, then complete real two-client BoP/Cena verification before any release work.
+- Goal: complete real two-client verification of the rank-aware BoP/Cena slice, then fix only demonstrated runtime issues before any release work.
 - Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
 
 ## Current Design / Development Contract
@@ -63,10 +64,19 @@
 - Sender control bell position mirrors the configured visual-origin Y offset; it animates only while the currently targeted recipient has an active outgoing ring and resets to frame 1 when inactive.
 - If local ringer position disappears after a usable endpoint was known, bearing continues from the recipient's live position/facing to the cached endpoint. If a ring starts with no usable endpoint yet, the existing non-directional origin fallback remains until usable local/remote position arrives.
 - BoP presentation is a 64 px aura icon at `UIParent CENTER`, X `-200`, Y `0`, with `Spell_Holy_SealOfProtection` fallback and pulsing additive `UI-ActionButton-Border` glow.
-- User uploaded the intended source as `artwork/cena.mp3` at `2096eea6c50985eb7c3f0020281b8e35d1f730b1`. Vanilla `PlaySoundFile` cannot stop/fade an individual custom sound, and ClassicAPI does not backport a per-file stop/fade API. Therefore use baked rank-specific PCM 16-bit mono 44.1 kHz WAVs: rank 1 = 6.5 s with fade 6.0-6.5, rank 2 = 8.5 s with fade 8.0-8.5, rank 3/default `artwork/cena.wav` = 10.5 s with fade 10.0-10.5. BoP nominal durations are 6/8/10 s for spell IDs 1022/5599/10278 respectively. Presentation lifetime should match the rank duration, while the audio fade occupies the following 0.5 s.
+- Vanilla `PlaySoundFile` cannot stop/fade an individual custom file, and ClassicAPI does not provide a per-file stop/fade backport. The uploaded source was therefore converted at `630676377e2c7ad3ce5a2219ee0dd31a4a0acb5a` into rank-specific PCM 16-bit mono 44.1 kHz WAVs and the MP3 source was removed:
+  - spell 1022 / rank 1: `artwork/cena_r1.wav`, 6.5 s, fade from 6.0-6.5 s;
+  - spell 5599 / rank 2: `artwork/cena_r2.wav`, 8.5 s, fade from 8.0-8.5 s;
+  - spell 10278 / rank 3: `artwork/cena.wav`, 10.5 s, fade from 10.0-10.5 s.
+- The verified client aura determines the rank locally. Icon/glow lifetime is 6/8/10 s respectively; the matching audio continues only through its baked 0.5-second fade tail. The wire protocol remains `BOP:<recipient>`.
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
 
 ## Recent Relevant Commits
+- `75e47b4e246cb42884421934061af61d91a5e5f8` — remove the one-shot Lua 5.0.2 checker workflow after successful validation.
+- `3fa99999fdc6862ae384482dcad9501e0c2dc616` — select Cena sound/presentation duration from the verified BoP rank.
+- `91ef18cf0569d99f3353657006449174e6452ebe` — remove the one-shot audio conversion workflow after conversion.
+- `630676377e2c7ad3ce5a2219ee0dd31a4a0acb5a` — convert the uploaded source into the three rank-timed WoW WAV assets and remove the MP3 source.
+- `2096eea6c50985eb7c3f0020281b8e35d1f730b1` — user upload of the intended Cena MP3 source.
 - `af5a03f98cafb7c3424bcefe2551ffe64fa5db94` — VanillaTemplate workflow migration; documentation-only, with runtime files unchanged from `597b076d2c3df4cd35c9dca52f517538b728c604`.
 - `597b076d2c3df4cd35c9dca52f517538b728c604` — runtime implementation baseline for the current `0.1.10-dev` test build.
 - `5b234923f9e3f416c69178669989fa3f6ea7e3cf` — add `artwork/cena.wav`.
@@ -88,7 +98,7 @@
   - successful-cast gating and negative cast-result handling;
   - discovered-client/ringer/group/recipient checks;
   - matching-aura caster verification;
-  - icon/glow/sound presentation and 10-second lifetime.
+  - rank-aware icon/glow/sound presentation: 6/8/10-second visual lifetime with matching 6.5/8.5/10.5-second audio assets and final 0.5-second baked fade.
 - Ring Bell verification is complete; the remaining `0.1.10-dev` runtime debt is the BoP/Cena slice. Static inspection or the presence of `cena.wav` is not runtime verification.
 
 ## Static / Automated Checks
@@ -96,13 +106,16 @@
 - Current 0.1.10 code has no newly introduced `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency.
 - All current `L.*` references resolve in `locales/enUS.lua`.
 - Approximate top-level local count is 142, below Lua 5.0's 200-local function/chunk limit.
-- `artwork/cena.wav` was read back from GitHub and verified as RIFF/WAVE PCM format 1, mono, 44100 Hz, 16 bits/sample.
-- No GitHub Actions/CI workflow exists. Static inspection is not an in-game test.
+- Audio conversion workflow read the source as 12.64 s MP3 and verified all generated files with `ffprobe`: PCM `pcm_s16le`, mono, 44100 Hz, 16 bits/sample, durations exactly 6.500000 / 8.500000 / 10.500000 seconds.
+- Runtime diff `3fa99999...` was statically reviewed: rank selection is derived from the same ClassicAPI aura that already passed sender verification; `BOP:<recipient>` communication and success/failure gating are unchanged.
+- Current code has no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all 61 current `L.*` references resolve; approximate top-level local declaration count remains 142.
+- A verified official Lua 5.0.2 source archive (SHA-256 `a6c85d85f912e1c321723084389d63dee7660b81b8292452b190ea7190dd73bc`, matching VanillaTemplate's checker source) was built and `luac -p` passed on the current addon Lua tree in Actions run `36027072530`.
+- The temporary checker workflow was removed after the pass; no persistent GitHub Actions workflow was added. Static/compiler checks are not an in-game test.
 
 ## Current Issues
 - The 0.1.9 Ring Bell refinement delta now has real two-client runtime evidence, including extreme-distance behavior. The 0.1.10 BoP/Cena delta still has no runtime evidence.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
-- The temporary `cena.wav` still needs replacement from the newly uploaded `artwork/cena.mp3`; rank-specific WAV generation/runtime selection is the active implementation task.
+- Rank-specific audio conversion and runtime selection are complete. The remaining BoP/Cena issue is runtime validation only.
 
 ## Testing
 
@@ -114,15 +127,19 @@
 
 ### Next Runtime Test
 Continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
-1. BoP positive path: from `/wg ringer`, cast successful BoP on a positively discovered client. The client should show the verified BoP icon at X `-200` / Y `0`, pulsing Vanilla action-button-style glow, play `artwork/cena.wav`, and keep the presentation for 10 seconds.
-2. BoP negatives: failed cast, interrupted cast, another paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation.
-3. Record each observed runtime outcome separately from static checks before any release work.
+1. Positive path for each available BoP rank from `/wg ringer` to a positively discovered client:
+   - rank 1 / 1022: icon+glow for about 6 s; `cena_r1.wav` fades over 6.0-6.5 s;
+   - rank 2 / 5599: icon+glow for about 8 s; `cena_r2.wav` fades over 8.0-8.5 s;
+   - rank 3 / 10278: icon+glow for about 10 s; `cena.wav` fades over 10.0-10.5 s.
+2. Confirm icon placement remains X `-200` / Y `0` and the proc-style glow/sound begin only after the verified successful BoP reaches the client.
+3. BoP negatives: failed cast, interrupted cast, another paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation.
+4. Record each observed runtime outcome separately from static/compiler checks before any release work.
 
 ## Planned / Next Work
 - Complete the BoP/Cena portion of the documented two-client pass and record exact results against the tested commit.
 - Fix only demonstrated failures or regressions, then rerun the affected test.
 - If the 0.1.10 runtime delta is accepted, prepare release only after explicit release work begins; do not silently promote from the current testing step.
-- Convert the uploaded Cena source into the documented rank-specific WAV assets, select the matching asset/presentation duration from the verified BoP aura rank, and retest the complete BoP/Cena path before release.
+- Runtime-test the rank-aware audio/visual timing and the existing BoP positive/negative gating before release.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -140,10 +157,10 @@ Continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on 
   - `artwork/wanderinggaia.png`;
   - `artwork/wanderinggaia2.png`.
 - Stable builds have historically excluded the integrated solo debug harness and development-status documents; preserve that release convention unless explicitly changed.
-- Runtime assets that must remain present when relevant are `artwork/WanderingGaia_BellSwing_256x64.tga`, `artwork/gaiasbell.wav`, and, if the BoP/Cena slice is accepted, `artwork/cena.wav`.
+- Runtime assets that must remain present when relevant are `artwork/WanderingGaia_BellSwing_256x64.tga`, `artwork/gaiasbell.wav`, and, if the BoP/Cena slice is accepted, `artwork/cena_r1.wav`, `artwork/cena_r2.wav`, and `artwork/cena.wav`.
 - Known validation debt accepted for the already released 0.1.9: its new sender-control/long-range refinement delta was promoted without a separate two-client verification pass.
 - No equivalent validation debt has been accepted for a future 0.1.10 release.
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Convert the newly uploaded `artwork/cena.mp3` into WoW-compatible rank-timed WAV assets (6.5/8.5/10.5 s, final 0.5 s fade; `cena.wav` is the rank-3/default 10.5 s file), update BoP presentation/runtime selection for ranks 1/2/3, run the real Lua 5.0.2 checker/static review, then perform the real two-client BoP/Cena positive and negative runtime tests before any release work.
+Run the real two-client `0.1.10-dev` BoP/Cena test on the current rank-aware runtime: verify successful ranks 1/2/3 use the 6/8/10-second icon+glow lifetimes and matching 6.5/8.5/10.5-second WAVs with final 0.5-second fade tails, then exercise the documented negative cases. Record those exact in-game results here before any release work.
