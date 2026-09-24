@@ -2306,11 +2306,6 @@ local function HandleDebugCommand(remainder)
         ProcessCommMessage(sender, "RING:0:" .. (UnitName("player") or ""), true)
         PrintMessage(string.format(L.DEBUG_RING_STOPPED, sender))
     elseif command == "cena" then
-        if runtimeMode ~= "client" then
-            PrintMessage(L.DEBUG_NEEDS_CLIENT)
-            return
-        end
-
         local rank = tonumber(argument)
         if argument == "" then
             rank = 3
