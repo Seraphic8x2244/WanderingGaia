@@ -138,7 +138,7 @@
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- User runtime-tested stable 0.2.4 and the real BoP gag still does not trigger. The sender target-token fix was necessary but insufficient; the remaining failure is now known to be later in the real path and must be traced through BOP message receipt, known-ringer state, aura lookup, and caster verification.
+- Stable 0.2.4 failed the real BoP gag, but the user has now runtime-tested dev 0.2.5-dev on both clients and the real gag fires successfully. Because 0.2.5 was intended as diagnostics-only over the 0.2.4 runtime fix, the next task is to compare the working dev runtime with stable 0.2.4/release stripping and identify the exact effective difference before another promotion.
 - Stable 0.2.3's target-token bug and non-persistent runtime mode were addressed in 0.2.4; mode persistence itself has not yet been separately reported by the user.
 - User explicitly accepted this 0.2.4 release validation debt because main 0.2.3 was already known-broken.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
@@ -146,21 +146,22 @@
 ## Testing
 
 ### Last Runtime Test
-- Stable version/commit: `0.2.4` / `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
-- Failed: a real BoP still produced no Cena gag after the 0.2.4 sender target-token fix.
-- Mode persistence result was not separately reported in this test.
+- Version/commit: `0.2.5-dev` / runtime checkpoint `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e` (handoff head `786fd5640e976c752a7998ad73b80c03d3f9f245`).
+- Passed: real two-client BoP gag fires successfully on the dev build.
+- Stable 0.2.4 at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38` had failed the same positive path.
+- Mode persistence result was not separately reported.
 - Earlier presentation-only debug test remains passed: pfUI-style animation runs, sound is good, and location is correct.
 - Passed locally through `/wg debug cena`: pfUI-style BoP icon animation runs, Cena sound is good, and presentation location is correct. User accepts the current animation for release.
 - Previously passed on the same 0.1.10 line: complete real two-client Ring Bell refinement set, including extreme-distance behavior, mirrored sender-bell placement, active/inactive animation, left re-ring/throttle, immediate right-click stop, `POSQ`/`POS`, and recovery to live positioning.
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-Use dev 0.2.5-dev on both clients. On both, run `/wg debug boptrace on`. Keep the paladin in ringer mode and the recipient in client mode, then cast one real BoP on the discovered grouped recipient. Capture the complete `WanderingGaia BoP trace:` lines from both clients. Those lines will identify whether the failure is before BOP send, at receive/known-ringer gating, or at aura/source verification.
+No further positive-path retest is needed yet: dev 0.2.5-dev has now passed the real two-client BoP gag. First compare the working dev runtime against stable 0.2.4 and the stable debug-stripping transform to identify why stable failed while dev succeeds. After that, produce the smallest stable-equivalent candidate and only then ask for a focused confirmation if needed.
 
 ## Planned / Next Work
-- Run the new dev-only BoP trace once on both clients and decode the first failing gate.
-- Fix only that demonstrated gate; do not promote another guessed fix.
-- Preserve proven Ring Bell behavior plus BoP recipient/auth invariants unless the trace/API evidence shows an invariant itself is wrong.
+- Diff working 0.2.5-dev runtime behavior against stable 0.2.4, especially release stripping of the integrated debug harness and any timing/state side effects from trace instrumentation.
+- Identify the exact effective difference before changing stable code.
+- Preserve proven Ring Bell behavior plus BoP recipient/auth invariants; do not promote another guessed fix.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -184,4 +185,4 @@ Use dev 0.2.5-dev on both clients. On both, run `/wg debug boptrace on`. Keep th
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Install dev 0.2.5-dev on both grouped test clients, run `/wg debug boptrace on` on both, keep sender in `/wg ringer` and recipient in `/wg client`, then cast one real BoP. Collect every `WanderingGaia BoP trace:` line from both clients. Use that single trace to identify and fix the exact remaining gate before any further stable promotion.
+Compare working dev 0.2.5-dev runtime checkpoint `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e` against stable 0.2.4 `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`, including the release debug-stripping transform, and determine what functional/timing difference explains why the dev gag fires while stable did not. Do not promote 0.2.5 until that difference is understood.
