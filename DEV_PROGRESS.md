@@ -5,8 +5,8 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.10-dev`
-- Current runtime checkpoint: `097483afb2fdc4dafdb00df4ebc4f122f0f04c33` — `/wg debug cena [1|2|3]` works in either ringer or client mode; the real BoP path remains ringer -> client only.
-- Current `dev` head before this handoff update: `7df57e10209d92b849350c8d10dc4fe0ae5271eb`; later commits after the runtime checkpoint are one-shot checker add/remove housekeeping only and no temporary workflow remains.
+- Current runtime checkpoint: `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — BoP/Cena presentation now uses a self-contained pfUI-style repeated `zoomfade` icon pulse; `/wg debug cena [1|2|3]` remains mode-agnostic on dev and the real BoP path remains ringer -> client only.
+- Current `dev` head before this handoff update: `15db2ffc0a09648bf3a486c7f9acbcb78956d5dd`; later commits after the runtime checkpoint are one-shot checker add/remove housekeeping only and no temporary workflow remains.
 - Stable runtime baseline: `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`.
 - Current `main` head: `8e4926cdb30042d2e025209262236bbce5f8fa2a` (still `0.1.9`; later commits are presentation-only).
 - Goal: complete real two-client verification of the rank-aware BoP/Cena slice, then fix only demonstrated runtime issues before any release work.
@@ -63,7 +63,7 @@
 ### Active Decisions
 - Sender control bell position mirrors the configured visual-origin Y offset; it animates only while the currently targeted recipient has an active outgoing ring and resets to frame 1 when inactive.
 - If local ringer position disappears after a usable endpoint was known, bearing continues from the recipient's live position/facing to the cached endpoint. If a ring starts with no usable endpoint yet, the existing non-directional origin fallback remains until usable local/remote position arrives.
-- BoP presentation is a 64 px aura icon at `UIParent CENTER`, X `-200`, Y `0`, with `Spell_Holy_SealOfProtection` fallback. The earlier pulsing `UI-ActionButton-Border` approximation is rejected by the user. Replace it with pfUI's `zoomfade` action-button animation behavior: a duplicate of the current icon expands and fades, using pfUI's same per-frame fade/scale formula. Repeat that one-shot pulse for the BoP presentation lifetime; do not add a pfUI runtime dependency.
+- BoP presentation is a 64 px aura icon at `UIParent CENTER`, X `-200`, Y `0`, with `Spell_Holy_SealOfProtection` fallback. The earlier pulsing `UI-ActionButton-Border` approximation was rejected by the user and removed. Current implementation uses a self-contained pfUI-style `zoomfade`: a duplicate of the current icon expands and fades using pfUI's same per-frame fade/scale formula, then repeats for the BoP presentation lifetime. There is no pfUI runtime dependency.
 - Vanilla `PlaySoundFile` cannot stop/fade an individual custom file, and ClassicAPI does not provide a per-file stop/fade backport. The uploaded source was therefore converted at `630676377e2c7ad3ce5a2219ee0dd31a4a0acb5a` into rank-specific PCM 16-bit mono 44.1 kHz WAVs and the MP3 source was removed:
   - spell 1022 / rank 1: `artwork/cena_r1.wav`, 6.5 s, fade from 6.0-6.5 s;
   - spell 5599 / rank 2: `artwork/cena_r2.wav`, 8.5 s, fade from 8.0-8.5 s;
@@ -73,6 +73,7 @@
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
 
 ## Recent Relevant Commits
+- `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — replace rejected action-button border pulse with repeated pfUI-style `zoomfade` icon animation; sound, placement, rank timing and real BoP gating unchanged.
 - `097483afb2fdc4dafdb00df4ebc4f122f0f04c33` — remove the debug-only client-mode guard so Cena presentation preview works while testing in `/wg ringer`; real BoP ringer/client gating is unchanged.
 - `a225fe3dfa81543f3a1ffe8d824fcd12eea02a8e` — document the mode-agnostic dev-debug exception before implementation.
 - `c06230493568520aa3c6735ef88af1a3becdca3e` — add localized help/status strings for the Cena presentation debug command.
@@ -100,7 +101,7 @@
 - Real two-client `0.1.10-dev` Ring Bell refinement pass: user reports the complete Ring Bell test set working as expected, including at extreme distances. This verifies mirrored sender-control placement, active/inactive animation behavior, left re-ring/throttle behavior, immediate right-click stop, long-range position loss/refresh behavior, `POSQ`/`POS` recovery, and return to live positioning in the target environment.
 
 ## Implemented / Awaiting Runtime Test
-- The dev-only `/wg debug cena [1|2|3]` presentation test is implemented and statically/compiler checked, but has not yet been exercised in game.
+- The dev-only `/wg debug cena [1|2|3]` presentation test is implemented and statically/compiler checked. The earlier border-pulse visual was user-exercised and rejected; the replacement pfUI-style `zoomfade` visual has not yet been user-tested.
 - The 0.1.10 BoP/Cena slice is implemented but has not been exercised in game:
   - successful-cast gating and negative cast-result handling;
   - discovered-client/ringer/group/recipient checks;
@@ -120,6 +121,7 @@
 - The temporary checker workflow was removed after the pass; no persistent GitHub Actions workflow was added. Static/compiler checks are not an in-game test.
 - After adding `/wg debug cena`, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028531820`. Both temporary checker files were then removed.
 - After removing the debug-only client-mode guard, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028967511`. The temporary workflow was removed immediately afterward.
+- After replacing the border pulse with the pfUI-style `zoomfade`, static review found no modern API regressions or unresolved locale references, top-level local declarations remained 142, the old `UI-ActionButton-Border`/`glowCycle` path was absent, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36031964090`. The temporary workflow was removed immediately afterward.
 
 ## Current Issues
 - The 0.1.9 Ring Bell refinement delta now has real two-client runtime evidence, including extreme-distance behavior. The 0.1.10 BoP/Cena delta still has no runtime evidence.
@@ -137,7 +139,7 @@
 ### Next Runtime Test
 First do the local presentation pass on the current `0.1.10-dev` runtime while staying in whichever mode is convenient for testing (including `/wg ringer`):
 1. Run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` (plain `/wg debug cena` is rank 3).
-2. Verify the icon is 64 px at X `-200` / Y `0`, the proc-style glow animates, the correct sound plays, visual lifetime is about 6/8/10 s, and each sound fades over the following final 0.5 s.
+2. Verify the icon is 64 px at X `-200` / Y `0`, the repeated pfUI-style `zoomfade` pulse matches the expected action-button effect, the correct sound plays, visual lifetime is about 6/8/10 s, and each sound fades over the following final 0.5 s.
 3. This local debug pass validates presentation only; it does not validate cast success, addon transport, ringer identity or aura-caster authentication.
 
 Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
@@ -178,4 +180,4 @@ Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAP
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Replace the rejected BoP border pulse with a self-contained copy of pfUI's `zoomfade` icon animation behavior, repeated for the active BoP presentation lifetime while preserving icon placement, rank timing, audio, and real ringer -> client gating. Run the Lua 5.0.2/static checks, then test via `/wg debug cena 1|2|3` while staying in `/wg ringer`.
+While remaining in `/wg ringer`, run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` and judge the replacement pfUI-style repeated `zoomfade` pulse against the action-button animation you expect. Also confirm icon placement/size and the already-good sound/fade behavior. Record that local runtime result here before the real two-client BoP positive/negative gating tests.
