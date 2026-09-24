@@ -4,9 +4,9 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.2.3-dev`
-- Current runtime checkpoint: `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — BoP/Cena presentation now uses a self-contained pfUI-style repeated `zoomfade` icon pulse; `/wg debug cena [1|2|3]` remains mode-agnostic on dev and the real BoP path remains ringer -> client only.
-- Current `dev` head before this handoff update: `ae1fd178b001b7f68cd8c82dcd2fda71c5797548`; runtime remains `65ddb913d1ee3d88de2cfbbda7a31d665311364f`.
+- Version: `0.2.4-dev`
+- Current runtime checkpoint: `2483508d4ab84a11a8bcfeecbb5446d69ee739ab` — persists ringer/client mode and fixes the real BoP sender target-token/name mismatch.
+- Current `dev` head before this handoff update: `fabc42b86739804479d082217919b563325e0635`; later commits after the runtime checkpoint are one-shot Lua checker add/remove housekeeping only and no temporary workflow remains.
 - Stable runtime release: `0.2.3` at `1ef7f3429cdee0d840f3c27418a332d4fafb92a9` (version-only bump from the accepted 0.1.10 runtime).
 - Current `main` head: `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`.
 - Goal: fix the demonstrated real-use BoP/Cena failure and persist the selected ringer/client mode across reloads/restarts, without changing proven Ring Bell behavior or broadening scope.
@@ -73,6 +73,8 @@
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
 
 ## Recent Relevant Commits
+- `2483508d4ab84a11a8bcfeecbb5446d69ee739ab` — persist selected runtime mode and resolve ClassicAPI `UNIT_SPELLCAST_SENT` target unit tokens to player names before BoP discovery/group gating.
+- `da406d106385fc587c87d9fe2f443355550068df` — bump dev version to 0.2.4-dev for the targeted runtime fix.
 - `1ef7f3429cdee0d840f3c27418a332d4fafb92a9` — version-only stable bump from 0.1.10 to 0.2.3; runtime unchanged.
 - `785dffc5683d45b4439a6c24e8de0630194ae6e9` — version-only dev bump from 0.1.10-dev to 0.2.3-dev; runtime unchanged.
 - `76720d7c351160b80fffd87eeb8aba60079c298f` — stable 0.1.10 release commit on `main`; built directly on the previous main tree so README and main-only artwork were preserved while stable runtime blobs and the three Cena WAVs were applied.
@@ -105,16 +107,14 @@
 - Local `/wg debug cena` presentation test on runtime `65ddb913...`: pfUI-style animation runs, sound is good, and location is correct. User accepts the current effect for the surprise release.
 
 ## Implemented / Awaiting Runtime Test
-- Stable 0.1.10 is released on `main`.
-- Remaining implemented-but-untested behavior is limited to the real two-client BoP path:
-  - successful-cast gating and negative cast-result handling;
-  - discovered-client/ringer/group/recipient checks;
-  - matching-aura caster verification.
-- Ring Bell is user-verified and the BoP/Cena presentation/audio path is locally user-tested and accepted.
+- Dev 0.2.4 now persists `runtimeMode` in `WanderingGaiaDB`; existing saves without a mode default to client, and a valid saved mode is preserved even if settings revision logic rebuilds the tuning table.
+- The demonstrated BoP sender failure has a targeted fix: ClassicAPI `UNIT_SPELLCAST_SENT` arg2 is a unit token, so the sender now resolves it through `UnitName` before checking name-keyed `knownClients` and `GroupUnitForName`.
+- These two deltas are statically/compiler checked but not yet user runtime-tested.
+- Ring Bell remains user-verified and the BoP/Cena presentation/audio path remains locally user-tested and accepted.
 
 ## Static / Automated Checks
 - 0.1.9 Ring Bell audit confirmed the documented mirrored control placement, active-only animation, 3.14-second per-recipient re-ring throttle, immediate right-click stop, local-position-first behavior, one-per-second `POSQ`, and active-ring-gated `POS` replies.
-- Current 0.1.10 code has no newly introduced `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency.
+- Current 0.2.4-dev code has no newly introduced `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency.
 - All current `L.*` references resolve in `locales/enUS.lua`.
 - Approximate top-level local count is 142, below Lua 5.0's 200-local function/chunk limit.
 - Audio conversion workflow read the source as 12.64 s MP3 and verified all generated files with `ffprobe`: PCM `pcm_s16le`, mono, 44100 Hz, 16 bits/sample, durations exactly 6.500000 / 8.500000 / 10.500000 seconds.
@@ -125,13 +125,13 @@
 - After adding `/wg debug cena`, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028531820`. Both temporary checker files were then removed.
 - After removing the debug-only client-mode guard, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028967511`. The temporary workflow was removed immediately afterward.
 - After replacing the border pulse with the pfUI-style `zoomfade`, static review found no modern API regressions or unresolved locale references, top-level local declarations remained 142, the old `UI-ActionButton-Border`/`glowCycle` path was absent, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36031964090`. The temporary workflow was removed immediately afterward.
+- For the 0.2.4-dev mode/BoP fix, ClassicAPI source review confirmed `UNIT_SPELLCAST_SENT` shape `(unitTarget, target, castGUID, spellID, ...)` with `target` explicitly documented as a unit token. Static review found no unresolved locale references or modern API regressions, top-level locals remain 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36039398457`; the temporary workflow was removed.
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- User reports the real BoP gag did not trigger on stable 0.2.3. This is now a demonstrated runtime failure, not merely validation debt; diagnose the actual ClassicAPI spellcast/aura path before changing gating semantics.
-- Runtime mode currently resets to client on every addon load because it is not persisted; user requires the selected ringer/client mode to save across reloads/restarts.
+- Stable 0.2.3 has the demonstrated real BoP sender bug: ClassicAPI sends a target unit token in `UNIT_SPELLCAST_SENT`, while 0.2.3 incorrectly tested that token against name-keyed discovery state. The 0.2.4-dev fix awaits runtime verification.
+- Stable 0.2.3 also does not persist ringer/client mode. The 0.2.4-dev persistence fix awaits runtime verification.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
-- No known failure is currently demonstrated in the released 0.1.10 runtime.
 
 ## Testing
 
@@ -142,18 +142,15 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-When practical, exercise the released 0.1.10 real two-client BoP path on WoW 1.12.1 with ClassicAPI on both clients:
-1. Positive path for each available BoP rank from `/wg ringer` to a positively discovered client:
-   - rank 1 / 1022: icon+glow for about 6 s; `cena_r1.wav` fades over 6.0-6.5 s;
-   - rank 2 / 5599: icon+glow for about 8 s; `cena_r2.wav` fades over 8.0-8.5 s;
-   - rank 3 / 10278: icon+glow for about 10 s; `cena.wav` fades over 10.0-10.5 s.
-2. Confirm icon placement remains X `-200` / Y `0` and the proc-style glow/sound begin only after the verified successful BoP reaches the client.
-3. BoP negatives: failed cast, interrupted cast, another paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation.
-4. Record each observed runtime outcome separately from static/compiler checks before any release work.
+On dev 0.2.4-dev / runtime commit `2483508d4ab84a11a8bcfeecbb5446d69ee739ab`:
+1. On the ringer, run `/wg ringer`, then `/reload`, then `/wg debug state`; confirm the reported mode is still `ringer`.
+2. With a positively discovered grouped WanderingGaia client targeted, cast Blessing of Protection normally. The gag should trigger on that client.
+3. If the positive cast works, verify a failed/interrupted BoP does not trigger the gag. Further negative auth/aura-caster cases can follow after the primary failure is closed.
+4. Record persistence and real-BoP results separately; do not promote the fix to main before the user runtime result.
 
 ## Planned / Next Work
-- Persist `runtimeMode` in `WanderingGaiaDB`, defaulting only previously-unsaved installs to client.
-- Trace the real ClassicAPI `UNIT_SPELLCAST_*` event argument contracts and aura-source fields against the current BoP sender/receiver implementation; fix the demonstrated failure at its actual gate.
+- Runtime-test mode persistence and the fixed real BoP positive path on dev 0.2.4-dev.
+- If the positive path still fails, trace the next receiver-side gate with runtime evidence rather than weakening authentication speculatively.
 - Preserve all proven Ring Bell behavior and existing BoP recipient/auth invariants unless runtime/API evidence shows one is incorrect.
 
 ## Deferred / Out of Scope
@@ -178,4 +175,4 @@ When practical, exercise the released 0.1.10 real two-client BoP path on WoW 1.1
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-On `dev` at current head `5062f4e6e21609853bd1cdf28760d1ec7f93239c`, first persist the selected runtime mode in `WanderingGaiaDB` without changing settings-revision behavior. In parallel, inspect ClassicAPI's actual Vanilla spellcast event signatures and aura metadata against `HandleBopSpellcastSent`, `HandleBopSpellcastResult`, and `FindBopAuraFromSender`; identify and fix the demonstrated real BoP/Cena failure with the smallest evidence-based change. Then run static checks and the real Lua 5.0.2 checker before asking for a focused two-client retest.
+Runtime-test dev 0.2.4-dev at runtime commit `2483508d4ab84a11a8bcfeecbb5446d69ee739ab`: verify `/wg ringer` survives `/reload` via `/wg debug state`, then cast a real BoP on a positively discovered grouped client and confirm the Cena presentation triggers. Do not promote this fix to `main` until that focused runtime result is recorded.
