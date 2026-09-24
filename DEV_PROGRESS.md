@@ -8,7 +8,7 @@
 - Current runtime checkpoint: `2483508d4ab84a11a8bcfeecbb5446d69ee739ab` — persists ringer/client mode and fixes the real BoP sender target-token/name mismatch.
 - Current `dev` head before this handoff update: `fabc42b86739804479d082217919b563325e0635`; later commits after the runtime checkpoint are one-shot Lua checker add/remove housekeeping only and no temporary workflow remains.
 - Stable runtime release: `0.2.3` at `1ef7f3429cdee0d840f3c27418a332d4fafb92a9` (version-only bump from the accepted 0.1.10 runtime).
-- Current `main` head: `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`.
+- Current `main` head before 0.2.4 promotion: `1ef7f3429cdee0d840f3c27418a332d4fafb92a9`.
 - Goal: fix the demonstrated real-use BoP/Cena failure and persist the selected ringer/client mode across reloads/restarts, without changing proven Ring Bell behavior or broadening scope.
 - Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
 
@@ -131,6 +131,7 @@
 ## Current Issues
 - Stable 0.2.3 has the demonstrated real BoP sender bug: ClassicAPI sends a target unit token in `UNIT_SPELLCAST_SENT`, while 0.2.3 incorrectly tested that token against name-keyed discovery state. The 0.2.4-dev fix awaits runtime verification.
 - Stable 0.2.3 also does not persist ringer/client mode. The 0.2.4-dev persistence fix awaits runtime verification.
+- User explicitly accepts release validation debt for 0.2.4 because main 0.2.3 is already broken: the targeted fixes are compiler/static-checked but have not yet been exercised in-game.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
 
 ## Testing
@@ -175,4 +176,4 @@ On dev 0.2.4-dev / runtime commit `2483508d4ab84a11a8bcfeecbb5446d69ee739ab`:
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Runtime-test dev 0.2.4-dev at runtime commit `2483508d4ab84a11a8bcfeecbb5446d69ee739ab`: verify `/wg ringer` survives `/reload` via `/wg debug state`, then cast a real BoP on a positively discovered grouped client and confirm the Cena presentation triggers. Do not promote this fix to `main` until that focused runtime result is recorded.
+User explicitly authorized promoting the targeted 0.2.4 fixes to `main` before runtime verification because stable 0.2.3 is already known-broken. Prepare stable 0.2.4 from runtime commit `2483508d4ab84a11a8bcfeecbb5446d69ee739ab`, strip dev-only debug/docs, set stable TOC metadata, run the real Lua 5.0.2 checker, and advance current `main` while preserving main-only README/artwork. Record the stable commit and keep validation debt explicit: mode persistence and the real BoP positive path remain untested after the fix.
