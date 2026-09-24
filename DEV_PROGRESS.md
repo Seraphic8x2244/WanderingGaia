@@ -70,7 +70,7 @@
   - spell 10278 / rank 3: `artwork/cena.wav`, 10.5 s, fade from 10.0-10.5 s.
 - The verified client aura determines the rank locally. Icon/glow lifetime is 6/8/10 s respectively; the matching audio continues only through its baked 0.5-second fade tail. The wire protocol remains `BOP:<recipient>`.
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
-- Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted), client mode only. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates.
+- Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
 
 ## Recent Relevant Commits
 - `c06230493568520aa3c6735ef88af1a3becdca3e` — add localized help/status strings for the Cena presentation debug command.
@@ -132,9 +132,8 @@
 - Not tested in this result: the 0.1.10 BoP/Cena positive and negative paths.
 
 ### Next Runtime Test
-First do the local client-side presentation pass on the current `0.1.10-dev` runtime:
-1. Ensure client mode with `/wg client`.
-2. Run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` (plain `/wg debug cena` is rank 3).
+First do the local presentation pass on the current `0.1.10-dev` runtime while staying in whichever mode is convenient for testing (including `/wg ringer`):
+1. Run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` (plain `/wg debug cena` is rank 3).
 3. Verify the icon is 64 px at X `-200` / Y `0`, the proc-style glow animates, the correct sound plays, visual lifetime is about 6/8/10 s, and each sound fades over the following final 0.5 s.
 4. This local debug pass validates presentation only; it does not validate cast success, addon transport, ringer identity or aura-caster authentication.
 
@@ -176,4 +175,4 @@ Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAP
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-On the client, run `/wg client` then `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` to verify the real presentation path's icon placement/size, proc glow, 6/8/10-second visual timing and matching sound/fade behavior. Record those local runtime results here. After that, perform the real two-client BoP positive/negative gating tests before any release work.
+Remove the debug-only client-mode guard from `/wg debug cena [1|2|3]` while preserving the real ringer -> client BoP checks, run the Lua 5.0.2/static checks, then test ranks 1/2/3 locally while remaining in `/wg ringer`. Record those presentation results here before the real two-client BoP positive/negative gating tests.
