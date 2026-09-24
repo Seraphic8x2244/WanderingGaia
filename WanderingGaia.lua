@@ -1397,8 +1397,21 @@ local function ProcessCommMessage(sender, message, simulated)
 
     local playerName = UnitName("player")
 
+    if debugBopTrace and string.find(message, "^BOP:") then
+        TraceBop(string.format(
+            "RECV raw sender=%s player=%s grouped=%s self=%s",
+            tostring(sender),
+            tostring(playerName),
+            GroupUnitForName(sender) and "yes" or "no",
+            sender == playerName and "yes" or "no"
+        ))
+    end
+
     if not simulated then
         if sender == playerName or not GroupUnitForName(sender) then
+            if debugBopTrace and string.find(message, "^BOP:") then
+                TraceBop("RECV dropped by normal sender/group gate")
+            end
             return
         end
     end
