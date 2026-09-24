@@ -158,11 +158,32 @@
 - Build stable runtime from current `dev`, strip the solo debug harness, use stable title/version `WanderingGaia` / `0.1.9`, and leave development docs off `main`.
 - Promote via a release branch based on current `main` so main-only presentation assets are retained.
 
+## Planned Next Slice — Blessing of Protection / Cena
+- Build this only after the real two-client `0.1.9` Ring Bell verification pass.
+- Scope is strictly ringer/admin -> discovered client:
+  - caster must currently be in `/wg ringer` mode;
+  - recipient must be a positively discovered WanderingGaia client;
+  - receiver must currently be in client mode;
+  - receiver should accept the event only from a grouped sender currently known as a ringer/admin, with `arg4` as authoritative sender identity.
+- Both users have ClassicAPI. Prefer ClassicAPI spellcast/aura events over button-press inference.
+- Successful-cast gating:
+  - track a pending Blessing of Protection cast from `UNIT_SPELLCAST_SENT`, including target and castGUID/spell identity;
+  - clear failed/interrupted/invalid pending attempts from the corresponding spellcast failure events;
+  - only send the BoP presentation event after the matching `UNIT_SPELLCAST_SUCCEEDED` confirms that same pending BoP cast;
+  - recipient should additionally verify Blessing of Protection is actually present on `"player"` before starting presentation, allowing a short wait for aura propagation if the addon message arrives first.
+- Proposed wire event: `BOP:<recipient>`. Existing Ring Bell protocol remains unchanged.
+- Presentation on the client:
+  - Blessing of Protection icon;
+  - anchored at `UIParent CENTER`, X = `-200`, Y = `0`;
+  - Overpower-style Blizzard action-button proc-glow animation around the icon;
+  - play the supplied Cena sound at the same moment;
+  - presentation duration: 10 seconds, then icon/glow/sound state ends.
+- No presentation should fire for an attempted but failed BoP, a BoP from another paladin, a non-ringer sender, a non-client recipient, or the wrong target.
+
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
 - Real two-client/cross-client validation until after the surprise is delivered or a safe unrelated second client becomes available.
-- Blessing of Protection / John Cena feature.
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Start a fresh chat from this handoff. Stable `main` is `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`; `dev` retains the development/debug harness and current implementation history. First priority is real two-client verification of the `0.1.9` refinements: sender bell position/animation, left re-ring throttle, right-click stop, and long-range `POSQ`/`POS` tracking. Do not begin Blessing of Protection/Cena work until that verification is complete.
+Start a fresh chat from this handoff. Stable `main` is `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`. First perform the real two-client `0.1.9` verification: sender-bell position/animation, left re-ring throttle, right-click stop, and long-range `POSQ`/`POS` tracking. Once that passes, implement the documented Blessing of Protection/Cena slice on `dev`: ClassicAPI-confirmed successful ringer/admin BoP to a discovered client, `BOP:<recipient>`, recipient aura verification, BoP icon at X -200 / Y 0 with Overpower-style proc glow, and 10-second sound/presentation.
