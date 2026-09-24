@@ -11,6 +11,21 @@ local COMM_PREFIX = "WanderingGaia"
 local RING_SOUND_DURATION = 1.57
 local RING_THROTTLE = RING_SOUND_DURATION * 2
 local POSITION_REQUEST_INTERVAL = 1.0
+
+local BOP = {
+    spellIDs = { 1022, 5599, 10278 },
+    spellIDSet = {
+        [1022] = true,
+        [5599] = true,
+        [10278] = true,
+    },
+    fallbackIcon = "Interface\\Icons\\Spell_Holy_SealOfProtection",
+    glowTexture = "Interface\\Buttons\\UI-ActionButton-Border",
+    sound = "Interface\\AddOns\\WanderingGaia\\artwork\\cena.wav",
+    auraWait = 1.5,
+    duration = 10.0,
+    glowCycle = 0.80,
+}
 local POSITION_INTERVAL = 0.05
 local COORDS_INTERVAL = 0.10
 local ANIMATION_INTERVAL = 0.07
@@ -68,8 +83,18 @@ local deadzoneOverlays = {}
 
 local runtimeMode = "client"
 local knownClients = {}
+local knownRingers = {}
 local outgoingRings = {}
 local incomingRings = {}
+local pendingBopCast = nil
+local bopPresentation = {
+    frame = nil,
+    icon = nil,
+    glow = nil,
+    pending = nil,
+    active = false,
+    startedAt = 0,
+}
 local debugClients = {}
 local debugUnitOverrides = {}
 local controlButton = nil
@@ -669,6 +694,215 @@ local function SendComm(message)
     return true
 end
 
+local function EnsureBopPresentation()
+    if bopPresentation.frame then
+        return
+    end
+
+    local frame = CreateFrame("Frame", "WanderingGaiaBopPresentation", UIParent)
+    frame:SetWidth(64)
+    frame:SetHeight(64)
+    frame:SetPoint("CENTER", UIParent, "CENTER", -200, 0)
+    frame:SetFrameStrata("DIALOG")
+    frame:Hide()
+
+    local icon = frame:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints(frame)
+    icon:SetTexture(BOP.fallbackIcon)
+
+    local glow = frame:CreateTexture(nil, "OVERLAY")
+    glow:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    glow:SetWidth(96)
+    glow:SetHeight(96)
+    glow:SetTexture(BOP.glowTexture)
+    glow:SetBlendMode("ADD")
+    glow:SetVertexColor(1.0, 0.82, 0.18)
+    glow:SetAlpha(1.0)
+
+    bopPresentation.frame = frame
+    bopPresentation.icon = icon
+    bopPresentation.glow = glow
+end
+
+local function StopBopPresentation()
+    bopPresentation.pending = nil
+    bopPresentation.active = false
+    bopPresentation.startedAt = 0
+
+    if bopPresentation.frame then
+        bopPresentation.frame:Hide()
+    end
+end
+
+local function BopAuraMatchesSender(aura, sender)
+    if not aura or not sender then
+        return false
+    end
+
+    if aura.sourceUnit and UnitExists(aura.sourceUnit) and UnitName(aura.sourceUnit) == sender then
+        return true
+    end
+
+    if aura.sourceGUID and type(UnitGUID) == "function" then
+        local senderUnit = GroupUnitForName(sender)
+
+        if senderUnit then
+            local senderGUID = UnitGUID(senderUnit)
+            if senderGUID and senderGUID == aura.sourceGUID then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+local function FindBopAuraFromSender(sender)
+    if type(C_UnitAuras) ~= "table"
+        or type(C_UnitAuras.GetUnitAuraBySpellID) ~= "function"
+    then
+        return nil
+    end
+
+    local i
+    for i = 1, table.getn(BOP.spellIDs) do
+        local aura = C_UnitAuras.GetUnitAuraBySpellID("player", BOP.spellIDs[i], "HELPFUL")
+
+        if BopAuraMatchesSender(aura, sender) then
+            return aura
+        end
+    end
+
+    return nil
+end
+
+local function StartBopPresentation(aura)
+    EnsureBopPresentation()
+
+    bopPresentation.pending = nil
+    bopPresentation.active = true
+    bopPresentation.startedAt = GetTime()
+
+    bopPresentation.icon:SetTexture((aura and aura.icon) or BOP.fallbackIcon)
+    bopPresentation.glow:SetWidth(96)
+    bopPresentation.glow:SetHeight(96)
+    bopPresentation.glow:SetAlpha(1.0)
+    bopPresentation.frame:Show()
+
+    if type(PlaySoundFile) == "function" then
+        PlaySoundFile(BOP.sound)
+    end
+end
+
+local function TryStartPendingBop()
+    local pending = bopPresentation.pending
+
+    if not pending or runtimeMode ~= "client" then
+        return
+    end
+
+    if not knownRingers[pending.sender] or not GroupUnitForName(pending.sender) then
+        bopPresentation.pending = nil
+        return
+    end
+
+    local aura = FindBopAuraFromSender(pending.sender)
+    if aura then
+        StartBopPresentation(aura)
+        return
+    end
+
+    if GetTime() >= pending.expiresAt then
+        bopPresentation.pending = nil
+    end
+end
+
+local function QueueIncomingBop(sender)
+    if runtimeMode ~= "client" or not knownRingers[sender] then
+        return
+    end
+
+    bopPresentation.pending = {
+        sender = sender,
+        expiresAt = GetTime() + BOP.auraWait,
+    }
+
+    TryStartPendingBop()
+end
+
+local function UpdateBopPresentation()
+    if bopPresentation.pending then
+        TryStartPendingBop()
+    end
+
+    if not bopPresentation.active then
+        return
+    end
+
+    local elapsed = GetTime() - bopPresentation.startedAt
+    if elapsed >= BOP.duration then
+        StopBopPresentation()
+        return
+    end
+
+    local cycle = elapsed - (math.floor(elapsed / BOP.glowCycle) * BOP.glowCycle)
+    local normalized = cycle / BOP.glowCycle
+    local pulse = 1 - math.abs((normalized * 2) - 1)
+    local glowSize = 88 + (pulse * 16)
+
+    bopPresentation.glow:SetWidth(glowSize)
+    bopPresentation.glow:SetHeight(glowSize)
+    bopPresentation.glow:SetAlpha(0.45 + (pulse * 0.55))
+end
+
+local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
+    pendingBopCast = nil
+
+    spellID = tonumber(spellID)
+    if runtimeMode ~= "ringer"
+        or unit ~= "player"
+        or not spellID
+        or not BOP.spellIDSet[spellID]
+        or not target
+        or target == ""
+        or not knownClients[target]
+        or not GroupUnitForName(target)
+    then
+        return
+    end
+
+    pendingBopCast = {
+        target = target,
+        castGUID = castGUID,
+        spellID = spellID,
+    }
+end
+
+local function HandleBopSpellcastResult(succeeded, unit, castGUID, spellID)
+    local pending = pendingBopCast
+
+    if not pending or unit ~= "player" then
+        return
+    end
+
+    spellID = tonumber(spellID)
+    if castGUID ~= pending.castGUID or spellID ~= pending.spellID then
+        return
+    end
+
+    pendingBopCast = nil
+
+    if not succeeded
+        or runtimeMode ~= "ringer"
+        or not knownClients[pending.target]
+        or not GroupUnitForName(pending.target)
+    then
+        return
+    end
+
+    SendComm("BOP:" .. pending.target)
+end
+
 local function ResolveIncomingUnit(sender)
     local override = debugUnitOverrides[sender]
 
@@ -1011,12 +1245,15 @@ local function ProcessCommMessage(sender, message, simulated)
 
     if message == "Q" then
         if runtimeMode == "client" and not simulated then
+            knownRingers[sender] = true
             SendComm("MODE:C")
         end
         return
     end
 
     if message == "MODE:C" then
+        knownRingers[sender] = nil
+
         if runtimeMode == "ringer" then
             knownClients[sender] = true
             UpdateControlButton()
@@ -1025,6 +1262,10 @@ local function ProcessCommMessage(sender, message, simulated)
     end
 
     if message == "MODE:R" then
+        if runtimeMode == "client" and not simulated then
+            knownRingers[sender] = true
+        end
+
         knownClients[sender] = nil
         outgoingRings[sender] = nil
         UpdateControlButton()
@@ -1062,6 +1303,17 @@ local function ProcessCommMessage(sender, message, simulated)
     if positionRecipient then
         if not simulated then
             ApplyRemotePosition(sender, positionRecipient, mapText, westText, northText, zText)
+        end
+        return
+    end
+
+    local _, _, bopRecipient = string.find(message, "^BOP:(.+)$")
+    if bopRecipient then
+        if runtimeMode == "client"
+            and bopRecipient == playerName
+            and knownRingers[sender]
+        then
+            QueueIncomingBop(sender)
         end
         return
     end
@@ -1161,6 +1413,11 @@ local function SetRuntimeMode(mode)
     end
 
     runtimeMode = mode
+    pendingBopCast = nil
+
+    if mode ~= "client" then
+        StopBopPresentation()
+    end
 
     if mode == "ringer" then
         SendComm("MODE:R")
@@ -1188,6 +1445,16 @@ local function RefreshGroupState()
     for name, active in pairs(outgoingRings) do
         if not debugClients[name] and not GroupUnitForName(name) then
             outgoingRings[name] = nil
+        end
+    end
+
+    for name, active in pairs(knownRingers) do
+        if not GroupUnitForName(name) then
+            knownRingers[name] = nil
+
+            if bopPresentation.pending and bopPresentation.pending.sender == name then
+                bopPresentation.pending = nil
+            end
         end
     end
 
@@ -2033,9 +2300,14 @@ local driver = CreateFrame("Frame")
 driver:SetScript("OnUpdate", function()
     local incomingActive = HasActiveIncomingRings()
     local controlActive = ControlRingActive()
+    local bopActive = bopPresentation.active or (bopPresentation.pending and true or false)
 
-    if not testEnabled and not coordsEnabled and not incomingActive and not controlActive then
+    if not testEnabled and not coordsEnabled and not incomingActive and not controlActive and not bopActive then
         return
+    end
+
+    if bopActive then
+        UpdateBopPresentation()
     end
 
     positionElapsed = positionElapsed + arg1
@@ -2105,6 +2377,11 @@ events:RegisterEvent("PLAYER_TARGET_CHANGED")
 events:RegisterEvent("PARTY_MEMBERS_CHANGED")
 events:RegisterEvent("RAID_ROSTER_UPDATE")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
+events:RegisterEvent("UNIT_SPELLCAST_SENT")
+events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+events:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+events:RegisterEvent("UNIT_SPELLCAST_FAILED")
+events:RegisterEvent("UNIT_SPELLCAST_FAILED_QUIET")
 events:SetScript("OnEvent", function()
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
         InitializeSettings()
@@ -2122,6 +2399,15 @@ events:SetScript("OnEvent", function()
     elseif event == "PLAYER_TARGET_CHANGED" then
         CancelIncomingRingForTarget()
         UpdateControlButton()
+    elseif event == "UNIT_SPELLCAST_SENT" then
+        HandleBopSpellcastSent(arg1, arg2, arg3, arg4)
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+        HandleBopSpellcastResult(true, arg1, arg2, arg3)
+    elseif event == "UNIT_SPELLCAST_INTERRUPTED"
+        or event == "UNIT_SPELLCAST_FAILED"
+        or event == "UNIT_SPELLCAST_FAILED_QUIET"
+    then
+        HandleBopSpellcastResult(false, arg1, arg2, arg3)
     elseif event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
         RefreshGroupState()
     end
