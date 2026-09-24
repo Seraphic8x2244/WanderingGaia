@@ -215,6 +215,14 @@ local function NormalizeSettings(target)
     target.smoothing = tonumber(target.smoothing) or DEFAULT_SETTINGS.smoothing
 end
 local function InitializeSettings()
+    local savedRuntimeMode = nil
+
+    if type(WanderingGaiaDB) == "table"
+        and (WanderingGaiaDB.runtimeMode == "client" or WanderingGaiaDB.runtimeMode == "ringer")
+    then
+        savedRuntimeMode = WanderingGaiaDB.runtimeMode
+    end
+
     if type(WanderingGaiaDB) ~= "table" or WanderingGaiaDB.settingsRevision ~= SETTINGS_REVISION then
         -- Revision 2 intentionally resets all previous tuning so the tested
         -- profile becomes the actual starting point after this update.
@@ -226,6 +234,8 @@ local function InitializeSettings()
         NormalizeSettings(WanderingGaiaDB)
     end
 
+    runtimeMode = savedRuntimeMode or "client"
+    WanderingGaiaDB.runtimeMode = runtimeMode
     settings = WanderingGaiaDB
 end
 CopyDefaults(settings)
@@ -905,14 +915,21 @@ local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
         or not BOP.spellIDSet[spellID]
         or not target
         or target == ""
-        or not knownClients[target]
-        or not GroupUnitForName(target)
     then
         return
     end
 
+    local targetName = target
+    if UnitExists(target) and UnitName(target) then
+        targetName = UnitName(target)
+    end
+
+    if not knownClients[targetName] or not GroupUnitForName(targetName) then
+        return
+    end
+
     pendingBopCast = {
-        target = target,
+        target = targetName,
         castGUID = castGUID,
         spellID = spellID,
     }
@@ -1422,6 +1439,10 @@ end
 local function SetRuntimeMode(mode)
     if mode ~= "client" and mode ~= "ringer" then
         return
+    end
+
+    if type(WanderingGaiaDB) == "table" then
+        WanderingGaiaDB.runtimeMode = mode
     end
 
     if runtimeMode == mode then
