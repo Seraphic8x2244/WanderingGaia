@@ -107,8 +107,6 @@ local bopPresentation = {
     startedAt = 0,
     duration = 0,
 }
-local debugClients = {}
-local debugUnitOverrides = {}
 local controlButton = nil
 local controlTexture = nil
 local controlAnimationElapsed = 0
@@ -944,16 +942,6 @@ local function HandleBopSpellcastResult(succeeded, unit, castGUID, spellID)
 end
 
 local function ResolveIncomingUnit(sender)
-    local override = debugUnitOverrides[sender]
-
-    if override then
-        if UnitExists(override) and UnitName(override) == sender then
-            return override
-        end
-
-        return nil
-    end
-
     return GroupUnitForName(sender)
 end
 
@@ -996,10 +984,6 @@ end
 
 local function RequestRemotePosition(entry)
     if not entry or not entry.active or runtimeMode ~= "client" then
-        return
-    end
-
-    if debugUnitOverrides[entry.sender] then
         return
     end
 
@@ -1270,21 +1254,19 @@ local function ApplyRemotePosition(sender, recipient, mapText, westText, northTe
     UpdateIncomingRingVisual(entry)
 end
 
-local function ProcessCommMessage(sender, message, simulated)
+local function ProcessCommMessage(sender, message)
     if not sender or sender == "" or not message then
         return
     end
 
     local playerName = UnitName("player")
 
-    if not simulated then
-        if sender == playerName or not GroupUnitForName(sender) then
-            return
-        end
+    if sender == playerName or not GroupUnitForName(sender) then
+        return
     end
 
     if message == "Q" then
-        if runtimeMode == "client" and not simulated then
+        if runtimeMode == "client" then
             knownRingers[sender] = true
             SendComm("MODE:C")
         end
@@ -1302,7 +1284,7 @@ local function ProcessCommMessage(sender, message, simulated)
     end
 
     if message == "MODE:R" then
-        if runtimeMode == "client" and not simulated then
+        if runtimeMode == "client" then
             knownRingers[sender] = true
         end
 
@@ -1326,8 +1308,7 @@ local function ProcessCommMessage(sender, message, simulated)
 
     local _, _, requestedRinger = string.find(message, "^POSQ:(.+)$")
     if requestedRinger then
-        if not simulated
-            and runtimeMode == "ringer"
+        if runtimeMode == "ringer"
             and requestedRinger == playerName
             and outgoingRings[sender]
         then
@@ -1341,9 +1322,7 @@ local function ProcessCommMessage(sender, message, simulated)
         "^POS:([^:]+):([^:]+):([^:]+):([^:]+):([^:]+)$"
     )
     if positionRecipient then
-        if not simulated then
-            ApplyRemotePosition(sender, positionRecipient, mapText, westText, northText, zText)
-        end
+        ApplyRemotePosition(sender, positionRecipient, mapText, westText, northText, zText)
         return
     end
 
@@ -1476,14 +1455,14 @@ local function RefreshGroupState()
     local sender, entry
 
     for name, active in pairs(knownClients) do
-        if not debugClients[name] and not GroupUnitForName(name) then
+        if not GroupUnitForName(name) then
             knownClients[name] = nil
             outgoingRings[name] = nil
         end
     end
 
     for name, active in pairs(outgoingRings) do
-        if not debugClients[name] and not GroupUnitForName(name) then
+        if not GroupUnitForName(name) then
             outgoingRings[name] = nil
         end
     end
@@ -1499,7 +1478,7 @@ local function RefreshGroupState()
     end
 
     for sender, entry in pairs(incomingRings) do
-        if entry.active and not debugUnitOverrides[sender] and not GroupUnitForName(sender) then
+        if entry.active and not GroupUnitForName(sender) then
             DeactivateIncomingRing(sender)
         end
     end
@@ -2224,131 +2203,6 @@ local function ParseCommand(message)
     return string.lower(command or ""), string.lower(remainder or "")
 end
 
-local function DebugActiveIncomingCount()
-    local count = 0
-    local sender, entry
-
-    for sender, entry in pairs(incomingRings) do
-        if entry.active then
-            count = count + 1
-        end
-    end
-
-    return count
-end
-
-local function DebugState()
-    local targetName = "-"
-    local known = "no"
-    local outgoing = "no"
-
-    if UnitExists("target") and UnitName("target") then
-        targetName = UnitName("target")
-
-        if knownClients[targetName] then
-            known = "yes"
-        end
-
-        if outgoingRings[targetName] then
-            outgoing = "yes"
-        end
-    end
-
-    PrintMessage(string.format(
-        L.DEBUG_STATE,
-        runtimeMode,
-        targetName,
-        known,
-        outgoing,
-        DebugActiveIncomingCount()
-    ))
-end
-
-local function DebugClear()
-    local name, active
-    local sender, entry
-
-    for name, active in pairs(debugClients) do
-        knownClients[name] = nil
-        outgoingRings[name] = nil
-    end
-
-    for sender, entry in pairs(incomingRings) do
-        if debugUnitOverrides[sender] then
-            DeactivateIncomingRing(sender)
-        end
-    end
-
-    debugClients = {}
-    debugUnitOverrides = {}
-    UpdateControlButton()
-    PrintMessage(L.DEBUG_CLEARED)
-end
-
-local function HandleDebugCommand(remainder)
-    local command, argument = ParseCommand(remainder)
-
-    if command == "discover" then
-        if runtimeMode ~= "ringer" then
-            PrintMessage(L.DEBUG_NEEDS_RINGER)
-            return
-        end
-
-        if not UnitExists("target") or not UnitName("target") then
-            PrintMessage(L.DEBUG_NEEDS_TARGET)
-            return
-        end
-
-        local targetName = UnitName("target")
-        debugClients[targetName] = true
-        ProcessCommMessage(targetName, "MODE:C", true)
-        PrintMessage(string.format(L.DEBUG_DISCOVERED, targetName))
-    elseif command == "ring" then
-        if runtimeMode ~= "client" then
-            PrintMessage(L.DEBUG_NEEDS_CLIENT)
-            return
-        end
-
-        if not UnitExists("target") or not UnitName("target") then
-            PrintMessage(L.DEBUG_NEEDS_TARGET)
-            return
-        end
-
-        local sender = UnitName("target")
-        debugUnitOverrides[sender] = "target"
-        ProcessCommMessage(sender, "RING:1:" .. (UnitName("player") or ""), true)
-        PrintMessage(string.format(L.DEBUG_RING_STARTED, sender))
-    elseif command == "off" then
-        if not UnitExists("target") or not UnitName("target") then
-            PrintMessage(L.DEBUG_NEEDS_TARGET)
-            return
-        end
-
-        local sender = UnitName("target")
-        ProcessCommMessage(sender, "RING:0:" .. (UnitName("player") or ""), true)
-        PrintMessage(string.format(L.DEBUG_RING_STOPPED, sender))
-    elseif command == "cena" then
-        local rank = tonumber(argument)
-        if argument == "" then
-            rank = 3
-        end
-
-        if rank ~= 1 and rank ~= 2 and rank ~= 3 then
-            PrintMessage(L.DEBUG_CENA_HELP)
-            return
-        end
-
-        StartBopPresentation({ icon = BOP.fallbackIcon }, BOP.spellIDs[rank])
-        PrintMessage(string.format(L.DEBUG_CENA_STARTED, rank))
-    elseif command == "clear" then
-        DebugClear()
-    elseif command == "state" then
-        DebugState()
-    else
-        PrintMessage(L.DEBUG_HELP)
-    end
-end
-
 local driver = CreateFrame("Frame")
 driver:SetScript("OnUpdate", function()
     local incomingActive = HasActiveIncomingRings()
@@ -2484,8 +2338,6 @@ SlashCmdList["WANDERINGGAIA"] = function(message)
         SetRuntimeMode("ringer")
     elseif command == "client" then
         SetRuntimeMode("client")
-    elseif command == "debug" then
-        HandleDebugCommand(remainder)
     elseif command == "config" then
         if remainder == "" then
             ToggleConfig()
