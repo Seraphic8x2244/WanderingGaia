@@ -12,7 +12,10 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.1.9-dev`
+- Version: `0.1.10-dev`
+- Resume/status checkpoint: `9ba81c947850a881d4e538cc98a019f40b0548a4`.
+- Blessing of Protection/Cena implementation: `e4696b7780176fccf8cb7922858839ea103a7eff`.
+- `0.1.10-dev` version bump: `670e081b2ad23cda64122006999c265ae778fd9c`.
 - Latest dev handoff/test commit before release prep: `e55c712e1ce806cf0412732057deabc602eb7393`.
 - Release-prep documentation commit: `f7c403e491077b86dd2a4b289b4fa89d7abe81c2`.
 - `0.1.9-dev` Ring Bell refinement implementation: `7d21ab0189db669cc8a294f7a400deed048fe397`.
@@ -27,7 +30,7 @@
 - Ring Bell locale commit: `1bbc32e33ce61dbb2311c8f8edb7fba8af4d6116`.
 - Solo-test plan/handoff pre-build commit: `d63ffc9f838bd4c7e522d59de42c0ea6e8d98afa`.
 - User-uploaded runtime sound commit: `51f02c970028a8048e77877edce73053084730ad`.
-- Goal: refine the now-successful real two-client Ring Bell behavior. Blessing of Protection/Cena remains a later slice.
+- Goal: runtime-test the statically checked 0.1.9 Ring Bell refinements and the newly implemented 0.1.10 BoP/Cena slice without changing the proven Ring Bell protocol/geometry.
 
 ## Completed / User-Verified
 - WoW 1.12.1 / Interface 11200 / Lua 5.0 baseline.
@@ -168,27 +171,50 @@
 - Build stable runtime from current `dev`, strip the solo debug harness, use stable title/version `WanderingGaia` / `0.1.9`, and leave development docs off `main`.
 - Promote via a release branch based on current `main` so main-only presentation assets are retained.
 
-## Planned Next Slice — Blessing of Protection / Cena
-- Build this only after the real two-client `0.1.9` Ring Bell verification pass.
+## Verification Status — 0.1.9 Ring Bell Refinements
+- Static audit completed on 2026-09-24 against the exact 0.1.9 refinement implementation:
+  - sender control position still mirrors configured Origin Y;
+  - active-target sender bell animation remains isolated from inactive targets;
+  - left re-ring remains per-recipient throttled at 3.14 seconds;
+  - right-click still clears/sends `RING:0` immediately with no stop throttle;
+  - local `UnitPosition(ringer)` remains primary;
+  - `POSQ` starts only after local position loss and is capped at one request/second per active ring;
+  - ringer `POS` replies remain gated to the corresponding active outgoing ring.
+- The final 0.1.10 diff does not rewrite those Ring Bell paths; after the pre-implementation checkpoint, only `WanderingGaia.lua` BoP/Cena additions and the TOC version changed.
+- This is **not** a real two-client in-game verification. The repository still has no user/runtime evidence for a separate 0.1.9 two-client refinement pass, and `DEV_GUIDE.md` explicitly forbids treating static inspection as user testing.
+
+## Implemented / Awaiting In-Game Test — 0.1.10-dev Blessing of Protection / Cena
+- Implemented on `dev` at `e4696b7780176fccf8cb7922858839ea103a7eff` after the static 0.1.9 Ring Bell audit. A true two-client 0.1.9 refinement verification was not possible in this session and remains separately unverified.
 - Scope is strictly ringer/admin -> discovered client:
   - caster must currently be in `/wg ringer` mode;
   - recipient must be a positively discovered WanderingGaia client;
   - receiver must currently be in client mode;
   - receiver should accept the event only from a grouped sender currently known as a ringer/admin, with `arg4` as authoritative sender identity.
 - Both users have ClassicAPI. Prefer ClassicAPI spellcast/aura events over button-press inference.
-- Successful-cast gating:
-  - track a pending Blessing of Protection cast from `UNIT_SPELLCAST_SENT`, including target and castGUID/spell identity;
-  - clear failed/interrupted/invalid pending attempts from the corresponding spellcast failure events;
-  - only send the BoP presentation event after the matching `UNIT_SPELLCAST_SUCCEEDED` confirms that same pending BoP cast;
-  - recipient should additionally verify Blessing of Protection is actually present on `"player"` before starting presentation, allowing a short wait for aura propagation if the addon message arrives first.
-- Proposed wire event: `BOP:<recipient>`. Existing Ring Bell protocol remains unchanged.
-- Presentation on the client:
-  - Blessing of Protection icon;
+- Successful-cast gating implemented:
+  - `UNIT_SPELLCAST_SENT` records only BoP ranks 1022/5599/10278 cast by the local ringer at a currently discovered grouped client, retaining target + castGUID + spellID;
+  - `UNIT_SPELLCAST_INTERRUPTED`, `UNIT_SPELLCAST_FAILED`, and `UNIT_SPELLCAST_FAILED_QUIET` clear the matching pending cast without sending;
+  - only a matching `UNIT_SPELLCAST_SUCCEEDED` while the target is still a discovered grouped client sends `BOP:<recipient>`.
+- Receiver gating implemented:
+  - ordinary addon-message validation still rejects self/non-group senders and treats `CHAT_MSG_ADDON arg4` as authoritative sender identity;
+  - clients track grouped peers that positively announce ringer mode through the existing `MODE:R` / ringer `Q` discovery flow;
+  - `BOP:<recipient>` is accepted only in client mode, only for the local player, and only from a currently known grouped ringer;
+  - presentation waits up to 1.5 seconds for ClassicAPI aura propagation;
+  - the player BoP aura must be one of ranks 1022/5599/10278 and its ClassicAPI `sourceUnit` or `sourceGUID` must resolve to the same ringer who sent the message.
+- Existing Ring Bell `Q` / `MODE:*` / `RING:*` / `CANCEL` / `POSQ` / `POS` wire messages are otherwise unchanged.
+- Presentation implemented:
+  - 64 px BoP icon, using the aura icon with `Spell_Holy_SealOfProtection` fallback;
   - anchored at `UIParent CENTER`, X = `-200`, Y = `0`;
-  - Overpower-style Blizzard action-button proc-glow animation around the icon;
-  - play the supplied Cena sound at the same moment;
-  - presentation duration: 10 seconds, then icon/glow/sound state ends.
-- No presentation should fire for an attempted but failed BoP, a BoP from another paladin, a non-ringer sender, a non-client recipient, or the wrong target.
+  - Vanilla-era additive `Interface\\Buttons\\UI-ActionButton-Border` glow, pulsed around the icon without retail-only overlay-glow APIs;
+  - `PlaySoundFile("Interface\\AddOns\\WanderingGaia\\artwork\\cena.wav")` starts with the visual;
+  - visual/glow lifetime is exactly 10 seconds.
+- Expected negative cases are enforced in code: failed/interrupted attempts do not send; undiscovered/non-group/wrong recipients do not send; non-client/wrong-recipient/non-ringer messages do not present; a BoP aura from a different caster does not satisfy verification.
+- Runtime prerequisite still missing: `artwork/cena.wav` is referenced but is not currently present in the repository or available conversation files. The sound path therefore cannot be tested yet.
+- Static checks after implementation:
+  - no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or other modern communication/timer dependency introduced;
+  - approximately 142 top-level locals, still below the Vanilla Lua chunk-local limit;
+  - final implementation diff is limited to `WanderingGaia.lua` plus the `0.1.10-dev` TOC bump.
+- Entire 0.1.10 BoP/Cena slice remains **awaiting in-game two-client testing**.
 
 ## Deferred
 - Any geometry retuning unless the solo test reveals a real regression.
@@ -196,4 +222,4 @@
 - Options UI, minimap button, frameworks/libraries, public/multi-user security model.
 
 ## Exact Next Step
-Start a fresh chat from this handoff. Stable `main` is `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`. First perform the real two-client `0.1.9` verification: sender-bell position/animation, left re-ring throttle, right-click stop, and long-range `POSQ`/`POS` tracking. Once that passes, implement the documented Blessing of Protection/Cena slice on `dev`: ClassicAPI-confirmed successful ringer/admin BoP to a discovered client, `BOP:<recipient>`, recipient aura verification, BoP icon at X -200 / Y 0 with Overpower-style proc glow, and 10-second sound/presentation.
+Add the intended `artwork/cena.wav` asset, then run a real two-client `0.1.10-dev` pass. First re-check the inherited 0.1.9 Ring Bell refinements (sender-bell mirrored position/animation, left re-ring throttle, immediate right-click stop, and long-range `POSQ`/`POS`). Then test BoP from the ringer to a positively discovered client: successful BoP should produce the verified BoP icon at X -200 / Y 0, Vanilla action-button-style proc glow and Cena audio for the intended 10-second presentation; failed/interrupted BoP, a different paladin's BoP, non-ringer sender, wrong/non-client recipient, and mismatched aura caster must produce no presentation. Record the actual in-game outcomes separately from static checks before any stable promotion.
