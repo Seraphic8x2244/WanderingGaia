@@ -6,10 +6,10 @@
 - Branch: `dev`
 - Version: `0.1.10-dev`
 - Current runtime checkpoint: `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — BoP/Cena presentation now uses a self-contained pfUI-style repeated `zoomfade` icon pulse; `/wg debug cena [1|2|3]` remains mode-agnostic on dev and the real BoP path remains ringer -> client only.
-- Current `dev` head before this handoff update: `15db2ffc0a09648bf3a486c7f9acbcb78956d5dd`; later commits after the runtime checkpoint are one-shot checker add/remove housekeeping only and no temporary workflow remains.
-- Stable runtime baseline: `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`.
-- Current `main` head: `8e4926cdb30042d2e025209262236bbce5f8fa2a` (still `0.1.9`; later commits are presentation-only).
-- Goal: complete real two-client verification of the rank-aware BoP/Cena slice, then fix only demonstrated runtime issues before any release work.
+- Current `dev` head before this handoff update: `ae1fd178b001b7f68cd8c82dcd2fda71c5797548`; runtime remains `65ddb913d1ee3d88de2cfbbda7a31d665311364f`.
+- Stable runtime release: `0.1.10` at `76720d7c351160b80fffd87eeb8aba60079c298f`.
+- Current `main` head: `76720d7c351160b80fffd87eeb8aba60079c298f`.
+- Goal: leave the accepted 0.1.10 surprise release stable, observe real use, and fix only demonstrated regressions. The remaining validation debt is the real two-client BoP cast/transport/auth/aura-verification path.
 - Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
 
 ## Current Design / Development Contract
@@ -73,6 +73,7 @@
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
 
 ## Recent Relevant Commits
+- `76720d7c351160b80fffd87eeb8aba60079c298f` — stable 0.1.10 release commit on `main`; built directly on the previous main tree so README and main-only artwork were preserved while stable runtime blobs and the three Cena WAVs were applied.
 - `65ddb913d1ee3d88de2cfbbda7a31d665311364f` — replace rejected action-button border pulse with repeated pfUI-style `zoomfade` icon animation; sound, placement, rank timing and real BoP gating unchanged.
 - `097483afb2fdc4dafdb00df4ebc4f122f0f04c33` — remove the debug-only client-mode guard so Cena presentation preview works while testing in `/wg ringer`; real BoP ringer/client gating is unchanged.
 - `a225fe3dfa81543f3a1ffe8d824fcd12eea02a8e` — document the mode-agnostic dev-debug exception before implementation.
@@ -99,14 +100,15 @@
 - The earlier solo client pass also exercised local ringer/client UI state, `gaiasbell.wav`, directional/distance placement, ring-off, and target-to-cancel behavior without reported Lua errors.
 - Approved runtime assets include `artwork/WanderingGaia_BellSwing_256x64.tga` and `artwork/gaiasbell.wav`.
 - Real two-client `0.1.10-dev` Ring Bell refinement pass: user reports the complete Ring Bell test set working as expected, including at extreme distances. This verifies mirrored sender-control placement, active/inactive animation behavior, left re-ring/throttle behavior, immediate right-click stop, long-range position loss/refresh behavior, `POSQ`/`POS` recovery, and return to live positioning in the target environment.
+- Local `/wg debug cena` presentation test on runtime `65ddb913...`: pfUI-style animation runs, sound is good, and location is correct. User accepts the current effect for the surprise release.
 
 ## Implemented / Awaiting Runtime Test
-- The dev-only `/wg debug cena [1|2|3]` presentation path has now been user-tested on the current pfUI-style `zoomfade` runtime. User reports the animation works, sound is good, and location is fine; although it was not initially the exact expected effect, the user subsequently accepted it for the 0.1.10 surprise release.
-- The 0.1.10 BoP/Cena presentation/audio slice is locally user-tested and accepted via `/wg debug cena`; the following real two-client gates remain implemented but untested:
+- Stable 0.1.10 is released on `main`.
+- Remaining implemented-but-untested behavior is limited to the real two-client BoP path:
   - successful-cast gating and negative cast-result handling;
   - discovered-client/ringer/group/recipient checks;
   - matching-aura caster verification.
-- Ring Bell verification is complete and the current BoP/Cena presentation/audio path is locally user-tested. Remaining `0.1.10-dev` runtime debt is the real two-client BoP cast/transport/auth/aura-verification path.
+- Ring Bell is user-verified and the BoP/Cena presentation/audio path is locally user-tested and accepted.
 
 ## Static / Automated Checks
 - 0.1.9 Ring Bell audit confirmed the documented mirrored control placement, active-only animation, 3.14-second per-recipient re-ring throttle, immediate right-click stop, local-position-first behavior, one-per-second `POSQ`, and active-ring-gated `POS` replies.
@@ -121,11 +123,12 @@
 - After adding `/wg debug cena`, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028531820`. Both temporary checker files were then removed.
 - After removing the debug-only client-mode guard, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028967511`. The temporary workflow was removed immediately afterward.
 - After replacing the border pulse with the pfUI-style `zoomfade`, static review found no modern API regressions or unresolved locale references, top-level local declarations remained 142, the old `UI-ActionButton-Border`/`glowCycle` path was absent, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36031964090`. The temporary workflow was removed immediately afterward.
+- Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- The 0.1.9 Ring Bell refinement delta now has real two-client runtime evidence, including extreme-distance behavior. The 0.1.10 BoP/Cena delta still has no runtime evidence.
+- Stable 0.1.10 carries explicitly accepted validation debt: the real two-client BoP cast/transport/auth/aura-verification path has not been runtime-tested.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
-- Rank-specific audio conversion and runtime selection are complete. The remaining BoP/Cena issue is runtime validation only.
+- No known failure is currently demonstrated in the released 0.1.10 runtime.
 
 ## Testing
 
@@ -136,12 +139,7 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-First do the local presentation pass on the current `0.1.10-dev` runtime while staying in whichever mode is convenient for testing (including `/wg ringer`):
-1. Run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` (plain `/wg debug cena` is rank 3).
-2. Verify the icon is 64 px at X `-200` / Y `0`, the repeated pfUI-style `zoomfade` pulse matches the expected action-button effect, the correct sound plays, visual lifetime is about 6/8/10 s, and each sound fades over the following final 0.5 s.
-3. This local debug pass validates presentation only; it does not validate cast success, addon transport, ringer identity or aura-caster authentication.
-
-Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
+When practical, exercise the released 0.1.10 real two-client BoP path on WoW 1.12.1 with ClassicAPI on both clients:
 1. Positive path for each available BoP rank from `/wg ringer` to a positively discovered client:
    - rank 1 / 1022: icon+glow for about 6 s; `cena_r1.wav` fades over 6.0-6.5 s;
    - rank 2 / 5599: icon+glow for about 8 s; `cena_r2.wav` fades over 8.0-8.5 s;
@@ -151,11 +149,9 @@ Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAP
 4. Record each observed runtime outcome separately from static/compiler checks before any release work.
 
 ## Planned / Next Work
-- Locally exercise the implemented dev-only `/wg debug cena [1|2|3]` presentation test before the real two-client pass.
-- Complete the BoP/Cena portion of the documented two-client pass and record exact results against the tested commit.
-- Fix only demonstrated failures or regressions, then rerun the affected test.
-- If the 0.1.10 runtime delta is accepted, prepare release only after explicit release work begins; do not silently promote from the current testing step.
-- Runtime-test the rank-aware audio/visual timing and the existing BoP positive/negative gating before release.
+- Let the 0.1.10 surprise release run naturally.
+- When possible, test the released real two-client BoP positive/negative gating and record exact results.
+- Fix only demonstrated failures or regressions; do not broaden into deferred scope without a new decision.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -165,18 +161,18 @@ Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAP
 - Broader public/multi-user security model.
 
 ## Release / Promotion Notes
-- Latest stable runtime release is `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`.
-- Current `main` head is `8e4926cdb30042d2e025209262236bbce5f8fa2a` and still reports `0.1.9`. The later main commits are presentation-only.
-- `main` and `dev` are divergent histories; release prep must compare them and preserve intended main content rather than replacing main blindly.
+- Latest stable runtime release is `0.1.10` at `76720d7c351160b80fffd87eeb8aba60079c298f`.
+- Current `main` head is the same `76720d7c...` release commit.
+- `main` and `dev` remain divergent histories. 0.1.10 was intentionally constructed directly on the existing main tree from checked stable blobs rather than merging dev, preserving main-only presentation content.
 - Main-only/presentation content to preserve:
   - current main `README.md` containing the artwork presentation;
   - `artwork/wanderinggaia.png`;
   - `artwork/wanderinggaia2.png`.
-- Stable builds have historically excluded the integrated solo debug harness and development-status documents; preserve that release convention unless explicitly changed.
+- Stable 0.1.10 excludes the integrated dev debug harness, `DEV_PROGRESS.md`, and `dev_rulebook.md`, preserving the established release convention.
 - Runtime assets that must remain present when relevant are `artwork/WanderingGaia_BellSwing_256x64.tga`, `artwork/gaiasbell.wav`, and, if the BoP/Cena slice is accepted, `artwork/cena_r1.wav`, `artwork/cena_r2.wav`, and `artwork/cena.wav`.
 - Known validation debt accepted for the already released 0.1.9: its new sender-control/long-range refinement delta was promoted without a separate two-client verification pass.
 - For 0.1.10, the user explicitly authorized promotion after accepting the current presentation/audio result as good enough for the surprise. Release validation debt: the real two-client BoP transport/success/auth/aura-caster positive/negative gating has not been runtime-tested; Ring Bell remains user-verified and the BoP presentation/audio debug path has been exercised locally.
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Prepare stable 0.1.10 from the accepted dev runtime without merging dev blindly into main: create a temporary release branch from the current dev checkpoint, strip `DEV_PROGRESS.md`, `dev_rulebook.md`, and integrated dev-only debug commands/strings, set stable TOC Title/Version, preserve the three Cena WAVs, run static/Lua 5.0.2 checks, then merge into the current divergent `main` while preserving main-only README/artwork. Record the exact stable commit. The user accepts the documented untested real two-client BoP gating debt for this surprise release.
+No further code change is required for the 0.1.10 surprise release. Let Gaia encounter the stable build naturally. When practical, runtime-test the released real two-client BoP positive/negative gating; if it exposes a failure, reproduce and fix only that demonstrated issue.
