@@ -5,8 +5,8 @@
 ## Current
 - Branch: `dev`
 - Version: `0.1.10-dev`
-- Current runtime implementation commit: `3fa99999fdc6862ae384482dcad9501e0c2dc616`.
-- Current `dev` head before the dev-only Cena presentation-test change: `1e40c6b02c66b1030ba84034d12597110723ea8e`; temporary conversion/check workflows have been removed.
+- Current runtime checkpoint: `c06230493568520aa3c6735ef88af1a3becdca3e` (debug command + locale); later commits through `03fa95360f5a57c3fb7e9dd689074d0066cdd1ab` are temporary checker add/remove housekeeping only.
+- Current `dev` head before this handoff update: `03fa95360f5a57c3fb7e9dd689074d0066cdd1ab`; no temporary workflow remains.
 - Stable runtime baseline: `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`.
 - Current `main` head: `8e4926cdb30042d2e025209262236bbce5f8fa2a` (still `0.1.9`; later commits are presentation-only).
 - Goal: complete real two-client verification of the rank-aware BoP/Cena slice, then fix only demonstrated runtime issues before any release work.
@@ -70,9 +70,12 @@
   - spell 10278 / rank 3: `artwork/cena.wav`, 10.5 s, fade from 10.0-10.5 s.
 - The verified client aura determines the rank locally. Icon/glow lifetime is 6/8/10 s respectively; the matching audio continues only through its baked 0.5-second fade tail. The wire protocol remains `BOP:<recipient>`.
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
-- Approved next debug addition: `/wg debug cena [1|2|3]` (rank 3 when omitted), client mode only. It must call the same `StartBopPresentation` presentation owner used by a real verified BoP, supplying only the synthetic local aura/icon and selected BoP spell ID. This intentionally tests the real icon position/size, proc glow, rank lifetime and WAV selection while bypassing only network/cast/aura authentication; it must not simulate or claim to test those gates.
+- Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted), client mode only. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates.
 
 ## Recent Relevant Commits
+- `c06230493568520aa3c6735ef88af1a3becdca3e` — add localized help/status strings for the Cena presentation debug command.
+- `a5576165e930e8e7e131a8b1a7c3c1dbfe646c3c` — add `/wg debug cena [1|2|3]`, routed through the real `StartBopPresentation` path.
+- `e43537ff67da1b6cbea6cfdb97e1645911d52cc8` — document the debug-path contract before implementation.
 - `75e47b4e246cb42884421934061af61d91a5e5f8` — remove the one-shot Lua 5.0.2 checker workflow after successful validation.
 - `3fa99999fdc6862ae384482dcad9501e0c2dc616` — select Cena sound/presentation duration from the verified BoP rank.
 - `91ef18cf0569d99f3353657006449174e6452ebe` — remove the one-shot audio conversion workflow after conversion.
@@ -95,6 +98,7 @@
 - Real two-client `0.1.10-dev` Ring Bell refinement pass: user reports the complete Ring Bell test set working as expected, including at extreme distances. This verifies mirrored sender-control placement, active/inactive animation behavior, left re-ring/throttle behavior, immediate right-click stop, long-range position loss/refresh behavior, `POSQ`/`POS` recovery, and return to live positioning in the target environment.
 
 ## Implemented / Awaiting Runtime Test
+- The dev-only `/wg debug cena [1|2|3]` presentation test is implemented and statically/compiler checked, but has not yet been exercised in game.
 - The 0.1.10 BoP/Cena slice is implemented but has not been exercised in game:
   - successful-cast gating and negative cast-result handling;
   - discovered-client/ringer/group/recipient checks;
@@ -112,6 +116,7 @@
 - Current code has no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all 61 current `L.*` references resolve; approximate top-level local declaration count remains 142.
 - A verified official Lua 5.0.2 source archive (SHA-256 `a6c85d85f912e1c321723084389d63dee7660b81b8292452b190ea7190dd73bc`, matching VanillaTemplate's checker source) was built and `luac -p` passed on the current addon Lua tree in Actions run `36027072530`.
 - The temporary checker workflow was removed after the pass; no persistent GitHub Actions workflow was added. Static/compiler checks are not an in-game test.
+- After adding `/wg debug cena`, static review again found no modern API regressions or unresolved locale references, top-level local declarations remained 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36028531820`. Both temporary checker files were then removed.
 
 ## Current Issues
 - The 0.1.9 Ring Bell refinement delta now has real two-client runtime evidence, including extreme-distance behavior. The 0.1.10 BoP/Cena delta still has no runtime evidence.
@@ -127,7 +132,13 @@
 - Not tested in this result: the 0.1.10 BoP/Cena positive and negative paths.
 
 ### Next Runtime Test
-Continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
+First do the local client-side presentation pass on the current `0.1.10-dev` runtime:
+1. Ensure client mode with `/wg client`.
+2. Run `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` (plain `/wg debug cena` is rank 3).
+3. Verify the icon is 64 px at X `-200` / Y `0`, the proc-style glow animates, the correct sound plays, visual lifetime is about 6/8/10 s, and each sound fades over the following final 0.5 s.
+4. This local debug pass validates presentation only; it does not validate cast success, addon transport, ringer identity or aura-caster authentication.
+
+Then continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on both clients:
 1. Positive path for each available BoP rank from `/wg ringer` to a positively discovered client:
    - rank 1 / 1022: icon+glow for about 6 s; `cena_r1.wav` fades over 6.0-6.5 s;
    - rank 2 / 5599: icon+glow for about 8 s; `cena_r2.wav` fades over 8.0-8.5 s;
@@ -137,7 +148,7 @@ Continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on 
 4. Record each observed runtime outcome separately from static/compiler checks before any release work.
 
 ## Planned / Next Work
-- Add and locally exercise the approved dev-only `/wg debug cena [1|2|3]` presentation test before the real two-client pass.
+- Locally exercise the implemented dev-only `/wg debug cena [1|2|3]` presentation test before the real two-client pass.
 - Complete the BoP/Cena portion of the documented two-client pass and record exact results against the tested commit.
 - Fix only demonstrated failures or regressions, then rerun the affected test.
 - If the 0.1.10 runtime delta is accepted, prepare release only after explicit release work begins; do not silently promote from the current testing step.
@@ -165,4 +176,4 @@ Continue the real two-client `0.1.10-dev` pass on WoW 1.12.1 with ClassicAPI on 
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Implement the dev-only client command `/wg debug cena [1|2|3]` (default rank 3) by routing through the existing `StartBopPresentation` path, then run the Lua 5.0.2/static checks. User should first use it to verify icon placement/size, proc glow, rank timing and all three sounds locally; after that, perform the real two-client BoP positive/negative gating tests before any release work.
+On the client, run `/wg client` then `/wg debug cena 1`, `/wg debug cena 2`, and `/wg debug cena 3` to verify the real presentation path's icon placement/size, proc glow, 6/8/10-second visual timing and matching sound/fade behavior. Record those local runtime results here. After that, perform the real two-client BoP positive/negative gating tests before any release work.
