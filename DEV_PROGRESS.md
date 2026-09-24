@@ -138,7 +138,7 @@
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- Stable 0.2.4 failed the real BoP gag, but the user has now runtime-tested dev 0.2.5-dev on both clients and the real gag fires successfully. Because 0.2.5 was intended as diagnostics-only over the 0.2.4 runtime fix, the next task is to compare the working dev runtime with stable 0.2.4/release stripping and identify the exact effective difference before another promotion.
+- Stable 0.2.4 failed the real BoP gag in the earlier test, but the user has now runtime-tested dev 0.2.5-dev on both clients and the real gag fires successfully. Comparison of the stable and dev BoP paths found no intended gating-semantic change in 0.2.5; its additions are diagnostics around the same conditions. The successful trace test explicitly forced sender `/wg ringer` and recipient `/wg client`, so persisted runtime mode/state is the leading explanation for the earlier stable failure rather than another proven code defect.
 - Stable 0.2.3's target-token bug and non-persistent runtime mode were addressed in 0.2.4; mode persistence itself has not yet been separately reported by the user.
 - User explicitly accepted this 0.2.4 release validation debt because main 0.2.3 was already known-broken.
 - A ring that begins while the ringer is already outside usable ClassicAPI position range has no pre-existing endpoint; it uses the configured non-directional origin fallback until usable local/remote position becomes available.
@@ -156,12 +156,12 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-No further positive-path retest is needed yet: dev 0.2.5-dev has now passed the real two-client BoP gag. First compare the working dev runtime against stable 0.2.4 and the stable debug-stripping transform to identify why stable failed while dev succeeds. After that, produce the smallest stable-equivalent candidate and only then ask for a focused confirmation if needed.
+No further BoP logic change is justified from current evidence. Before any stable promotion, confirm the intended persistent role assignment is sender `/wg ringer` and recipient `/wg client`; the dev positive path is already user-verified under that state. If the same explicit roles fail on stable 0.2.4, capture the dev trace lines; otherwise treat the earlier stable failure as mode/state-related.
 
 ## Planned / Next Work
-- Diff working 0.2.5-dev runtime behavior against stable 0.2.4, especially release stripping of the integrated debug harness and any timing/state side effects from trace instrumentation.
-- Identify the exact effective difference before changing stable code.
-- Preserve proven Ring Bell behavior plus BoP recipient/auth invariants; do not promote another guessed fix.
+- Preserve the now-working BoP logic; do not add another speculative gate change.
+- Treat persistent role state as part of the test contract: sender must be ringer, recipient must be client.
+- If promoting 0.2.5, strip diagnostics in the normal stable release process while keeping the tested 0.2.4 runtime fixes unchanged.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -185,4 +185,4 @@ No further positive-path retest is needed yet: dev 0.2.5-dev has now passed the 
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Compare working dev 0.2.5-dev runtime checkpoint `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e` against stable 0.2.4 `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`, including the release debug-stripping transform, and determine what functional/timing difference explains why the dev gag fires while stable did not. Do not promote 0.2.5 until that difference is understood.
+The real BoP positive path is user-verified on dev 0.2.5-dev with explicit sender ringer / recipient client roles. No further code fix is currently warranted. If release work is requested, promote the same working runtime behavior as stable 0.2.5 while stripping dev-only BoP tracing/debug material; keep mode persistence and the 0.2.4 target-token fix intact.
