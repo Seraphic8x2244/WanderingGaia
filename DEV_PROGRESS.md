@@ -1,5 +1,15 @@
 # Development Progress
 
+## Resume Status — 2026-09-24
+- Branch: `dev`; resume baseline/head before this session's edits: `3c86439694b712ebfebb8e3a5ba5f66f7bf66852`.
+- Version: `0.1.9-dev`.
+- Stable runtime baseline remains `0.1.9` at `09f6dd18bd56faca23e0336a463e6969bba6849e`; current `main` is two presentation-only commits ahead (README plus `artwork/wanderinggaia2.png`), with head `8e4926cdb30042d2e025209262236bbce5f8fa2a`.
+- Completed this session before implementation: confirmed supplied `dev` handoff exactly matches branch head; confirmed the documented Ring Bell 0.1.9 protocol/refinement code is the implementation baseline to audit; confirmed no Cena audio asset is currently present in repo/conversation files.
+- Runtime verification status: the repository handoff still records the 0.1.9 two-client refinement pass as awaiting a separate in-game verification. This session can statically verify those paths but must not claim a real two-client pass without user/runtime evidence.
+- Untested/new work: Blessing of Protection/Cena slice is not yet implemented or in-game tested at this checkpoint.
+- Deferred remains unchanged: geometry retuning, options/minimap/framework work, and broader public/multi-user security design.
+- Exact next step: statically audit the 0.1.9 sender-bell/re-ring/right-click/POSQ/POS paths against the documented behavior, then implement only the documented BoP/Cena slice on `dev`; preserve the real two-client runtime-verification distinction in the handoff.
+
 ## Current
 - Branch: `dev`
 - Version: `0.1.9-dev`
