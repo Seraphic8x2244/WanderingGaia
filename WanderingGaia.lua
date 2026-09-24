@@ -2264,7 +2264,7 @@ local function DebugClear()
 end
 
 local function HandleDebugCommand(remainder)
-    local command = string.lower(remainder or "")
+    local command, argument = ParseCommand(remainder)
 
     if command == "discover" then
         if runtimeMode ~= "ringer" then
@@ -2305,6 +2305,24 @@ local function HandleDebugCommand(remainder)
         local sender = UnitName("target")
         ProcessCommMessage(sender, "RING:0:" .. (UnitName("player") or ""), true)
         PrintMessage(string.format(L.DEBUG_RING_STOPPED, sender))
+    elseif command == "cena" then
+        if runtimeMode ~= "client" then
+            PrintMessage(L.DEBUG_NEEDS_CLIENT)
+            return
+        end
+
+        local rank = tonumber(argument)
+        if argument == "" then
+            rank = 3
+        end
+
+        if rank ~= 1 and rank ~= 2 and rank ~= 3 then
+            PrintMessage(L.DEBUG_CENA_HELP)
+            return
+        end
+
+        StartBopPresentation({ icon = BOP.fallbackIcon }, BOP.spellIDs[rank])
+        PrintMessage(string.format(L.DEBUG_CENA_STARTED, rank))
     elseif command == "clear" then
         DebugClear()
     elseif command == "state" then
