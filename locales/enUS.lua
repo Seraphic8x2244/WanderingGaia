@@ -6,7 +6,7 @@ WanderingGaia_L.TEST_NEEDS_CLASSICAPI = "WanderingGaia: target preview needs Cla
 WanderingGaia_L.TEST_HELP = "WanderingGaia: /wg test [on|off]"
 WanderingGaia_L.CONFIG_HELP = "WanderingGaia: /wg config [print|reset]"
 WanderingGaia_L.COORDS_HELP = "WanderingGaia: /wg coords [on|off]"
-WanderingGaia_L.ROOT_HELP = "WanderingGaia: /wg ringer, /wg client, /wg test [on|off], /wg config, /wg coords [on|off]"
+WanderingGaia_L.ROOT_HELP = "WanderingGaia: /wg ringer, /wg client, /wg test [on|off], /wg config, /wg coords [on|off], /wg debug"
 WanderingGaia_L.MODE_CLIENT = "WanderingGaia: client mode. You can be rung."
 WanderingGaia_L.MODE_RINGER = "WanderingGaia: ringer mode. Target a discovered client to show the control bell."
 
