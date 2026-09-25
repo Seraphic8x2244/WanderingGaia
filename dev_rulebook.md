@@ -115,20 +115,24 @@ Rules:
 - Never hardcode the addon version separately in Lua.
 - Use the real addon/folder name with `GetAddOnMetadata`.
 - Development builds use `-dev`.
-- Do not invent `-dev1`, `-dev2`, etc.; commits identify individual development states.
+- Every addon-affecting code, runtime, loader or metadata revision must bump the addon version before or as part of that revision. Do not use Git commits as a substitute for version increments.
+- Increment the patch component for ordinary development revisions within the same planned release line, for example `2.1.0-dev` -> `2.1.1-dev` -> `2.1.2-dev`.
+- A deliberate major/minor release-line change may instead bump that component, for example moving from the native 2.1 line to `3.0.0-dev`.
+- Documentation-only/status-only commits that do not change the addon product may keep the current addon version.
+- Do not invent suffix counters such as `-dev1` or `-dev2`; the numeric semantic version is the revision counter and `-dev` only marks development status.
 
 Development:
 
 ```toc
 ## Title: AddonName-dev
-## Version: 0.1.0-dev
+## Version: 0.1.1-dev
 ```
 
 Stable:
 
 ```toc
 ## Title: AddonName
-## Version: 0.1.0
+## Version: 0.1.1
 ```
 
 A user-tested result belongs to the exact version/commit that was tested. A later version may inherit that known-good baseline, but its new delta remains untested until exercised.
