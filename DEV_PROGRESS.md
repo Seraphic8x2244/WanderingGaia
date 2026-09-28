@@ -121,7 +121,7 @@
 ## Implemented / Awaiting Runtime Test
 - Dev `0.2.7-dev` keeps the existing Vanish trigger/transport semantics and applies only presentation tuning over the `0.2.6-dev` baseline: 384x96 dialog, `CENTER -300,-300`, shadowless sender title, 3-second lifetime, `device.wav`, and `/wg debug vanish` local preview.
 - `artwork/device.tga` and `artwork/device.wav` are both present on `dev`; the sound asset now matches the runtime path exactly.
-- The Vanish feature has not yet been exercised in-game, either through the debug presentation path or real two-client transport.
+- The Vanish local presentation path on `0.2.7-dev` / `c423067...` has now been user-tested and accepted after the 75% size, `-300,-300` placement, and shadow-removal tuning. Real two-client Vanish trigger/transport remains untested.
 - Stable 0.2.4 persists `runtimeMode` in `WanderingGaiaDB` and fixes the first demonstrated sender-side BoP target-token bug, but the user confirmed the real gag still fails.
 - Dev 0.2.5 adds diagnostics only; product behavior remains unchanged from 0.2.4. `/wg debug boptrace on|off` reports:
   - sender SENT/raw target resolution, discovery/group gate, cast result pairing, and BOP send result;
@@ -159,7 +159,10 @@
 ## Testing
 
 ### Last Runtime Test
-- Version/commit: `0.2.5-dev` / runtime checkpoint `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e`.
+- Version/commit: `0.2.7-dev` / runtime checkpoint `c4230674623c509381f29912769468bdadb9062f`.
+- User reports the tuned `/wg debug vanish` presentation is good. This accepts the 75% dialog size, `CENTER -300,-300` placement, shadowless title, 3-second presentation path, and current device artwork/sound combination for release.
+- This was a local presentation-path test only; real two-client successful/failed Vanish transport and cast gating remain untested.
+- Previous BoP runtime checkpoint: `0.2.5-dev` / `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e`.
 - Real BoP transport/presentation passed: Gaia saw the icon, and sender-side debug output showed the BoP path completed.
 - Audio result is now inconsistent rather than failed: Gaia first reported no Cena sound, then reported it did play. No reproducible audio defect is currently established.
 - Stable 0.2.4 at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38` had failed the same positive path.
@@ -175,8 +178,9 @@
 3. Confirm a failed/interrupted Vanish does not produce the gag and that existing Ring Bell / BoP behavior remains unchanged.
 
 ## Planned / Next Work
-- Run `/wg debug vanish` and tune only presentation coordinates/font sizing if the in-game image proves misaligned.
-- After local presentation passes, run the real two-client successful/failed Vanish transport test.
+- Promote the accepted `0.2.7-dev` Vanish runtime/presentation to stable `0.2.7` on `main` now, as explicitly authorized by the user.
+- Stable release prep must preserve main-only README/presentation artwork, strip dev-only debug hooks/strings and development docs, and include `artwork/device.tga` plus `artwork/device.wav`.
+- Record real two-client Vanish successful/failed transport/cast gating as accepted release validation debt; do not imply the stable tree received that runtime test.
 - Keep the current BoP/Cena path unchanged unless a reproducible failure is demonstrated.
 
 ## Deferred / Out of Scope
@@ -198,7 +202,8 @@
 - Runtime assets that must remain present when relevant are `artwork/WanderingGaia_BellSwing_256x64.tga`, `artwork/gaiasbell.wav`, the accepted BoP/Cena WAVs (`cena_r1.wav`, `cena_r2.wav`, `cena.wav`), and for the Vanish slice `artwork/device.tga` plus `artwork/device.wav`.
 - Known validation debt accepted for the already released 0.1.9: its new sender-control/long-range refinement delta was promoted without a separate two-client verification pass.
 - For 0.1.10, the user explicitly authorized promotion after accepting the current presentation/audio result as good enough for the surprise. Release validation debt: the real two-client BoP transport/success/auth/aura-caster positive/negative gating has not been runtime-tested; Ring Bell remains user-verified and the BoP presentation/audio debug path has been exercised locally.
+- For the requested 0.2.7 promotion, the user explicitly accepted the tuned local `/wg debug vanish` presentation and instructed promotion to `main`. Release validation debt: the real two-client Vanish success/failure trigger, sender transport, and receiver gating paths have not been runtime-tested.
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Run `/wg debug vanish` on Gaia with Revenra targeted and report whether the title is readable and whether the 75% size / `-300,-300` placement feel correct. Do not retune transport or other features based on this presentation-only test.
+Prepare and promote stable `0.2.7` directly on the current `main` tree from the accepted dev product delta: preserve main-only README/artwork, add `device.tga`/`device.wav`, strip all dev debug/docs, apply stable TOC metadata, perform available static validation, then update this document with the exact stable commit and remaining validation debt.
