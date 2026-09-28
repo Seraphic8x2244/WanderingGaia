@@ -7,8 +7,8 @@
 - Version: `0.2.7-dev`.
 - Current runtime checkpoint: `c4230674623c509381f29912769468bdadb9062f` — tunes the Vanish/device-disconnect presentation to 75% size, moves it 300 px left/down from screen centre, and removes the dynamic title shadow.
 - Current `dev` head before this status-only handoff update: `c4230674623c509381f29912769468bdadb9062f`; parent `d4ce8f45f1860f2acb554c25d3f914558c84f0be` documented the requested presentation tuning.
-- Stable runtime release: `0.2.4` at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
-- Current `main` head: `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
+- Stable runtime release: `0.2.7` at `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
+- Current `main` head: `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
 - Goal: add a Rogue Vanish gag: when the ringer successfully casts Vanish, grouped/discovered clients show a fake Windows device-disconnect dialog using `artwork/device.tga`, overlay the authoritative remote sender name in the blank title bar, play `artwork/device.wav`, then auto-hide after about 3 seconds. Preserve the existing Ring Bell and BoP/Cena behavior.
 - Current scope boundary: implement and test only the Vanish gag plus its dev debug path. Do not retune proven geometry, alter BoP/Cena behavior without new evidence, or start options/minimap/framework/public multi-user security work.
 
@@ -117,9 +117,10 @@
 - Approved runtime assets include `artwork/WanderingGaia_BellSwing_256x64.tga` and `artwork/gaiasbell.wav`.
 - Real two-client `0.1.10-dev` Ring Bell refinement pass: user reports the complete Ring Bell test set working as expected, including at extreme distances. This verifies mirrored sender-control placement, active/inactive animation behavior, left re-ring/throttle behavior, immediate right-click stop, long-range position loss/refresh behavior, `POSQ`/`POS` recovery, and return to live positioning in the target environment.
 - Local `/wg debug cena` presentation test on runtime `65ddb913...`: pfUI-style animation runs, sound is good, and location is correct. User accepts the current effect for the surprise release.
+- Local `/wg debug vanish` presentation test on `0.2.7-dev` / `c423067...`: user accepted the 75% dialog size, `CENTER -300,-300` placement, shadowless dynamic sender title, 3-second lifetime, and current device artwork/sound combination. This exact presentation/product delta was promoted to stable 0.2.7.
 
 ## Implemented / Awaiting Runtime Test
-- Dev `0.2.7-dev` keeps the existing Vanish trigger/transport semantics and applies only presentation tuning over the `0.2.6-dev` baseline: 384x96 dialog, `CENTER -300,-300`, shadowless sender title, 3-second lifetime, `device.wav`, and `/wg debug vanish` local preview.
+- Stable `0.2.7` at `39382408...` contains the accepted Vanish product path: successful Rank 1/2 Vanish pairing, bare `VANISH` transport, authoritative sender-name title, 384x96 dialog at `CENTER -300,-300`, shadowless title, 3-second lifetime, and `device.wav`. The stable tree excludes the dev debug preview/trace harness.
 - `artwork/device.tga` and `artwork/device.wav` are both present on `dev`; the sound asset now matches the runtime path exactly.
 - The Vanish local presentation path on `0.2.7-dev` / `c423067...` has now been user-tested and accepted after the 75% size, `-300,-300` placement, and shadow-removal tuning. Real two-client Vanish trigger/transport remains untested.
 - Stable 0.2.4 persists `runtimeMode` in `WanderingGaiaDB` and fixes the first demonstrated sender-side BoP target-token bug, but the user confirmed the real gag still fails.
@@ -148,6 +149,7 @@
 - Dev 0.2.5 BoP trace build has no unresolved locale references or modern API regressions, top-level locals are 144, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36041044689`; the temporary workflow was removed.
 - Dev 0.2.6 Vanish static review found no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all current `L.*` references resolve; approximate top-level local-variable count is 154, below Lua 5.0's 200-local chunk limit. `device.tga` and `device.wav` are both present. A Lua 5.0 compiler pass was not run for that revision.
 - Dev 0.2.7 presentation-tuning static review likewise found no modern-API regressions or unresolved locale references; approximate top-level local-variable count remains 154. The requested 384x96 geometry, `-300,-300` anchor, zero-alpha/zero-offset title shadow, and 9 pt title font are present. Lua 5.0 compiler pass has not been run for 0.2.7-dev and remains unverified.
+- Stable 0.2.7 release prep was built directly on the prior main tree and statically verified before moving `main`: stable Title/Version are `WanderingGaia` / `0.2.7`; `DEV_PROGRESS.md`, `dev_rulebook.md`, and all integrated debug hooks/strings are absent; main-only README plus `artwork/wanderinggaia.png` and `artwork/wanderinggaia2.png` are preserved; `artwork/device.tga` and `artwork/device.wav` are present; all stable `L.*` references resolve; no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency is present; approximate top-level local-variable count is 146. Stable Lua blob is `298e11bc6642518f3e993e3ccf2c7b7ca3d41fd2`. A Lua 5.0 compiler pass was not run for the 0.2.7 release tree because this chat had no executable runner after Work-mode handoff was declined; compiler status therefore remains unverified rather than passed.
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
@@ -178,9 +180,8 @@
 3. Confirm a failed/interrupted Vanish does not produce the gag and that existing Ring Bell / BoP behavior remains unchanged.
 
 ## Planned / Next Work
-- Promote the accepted `0.2.7-dev` Vanish runtime/presentation to stable `0.2.7` on `main` now, as explicitly authorized by the user.
-- Stable release prep must preserve main-only README/presentation artwork, strip dev-only debug hooks/strings and development docs, and include `artwork/device.tga` plus `artwork/device.wav`.
-- Record real two-client Vanish successful/failed transport/cast gating as accepted release validation debt; do not imply the stable tree received that runtime test.
+- Stable `0.2.7` is released on `main`; no further release action is pending.
+- When convenient, run the real two-client successful/failed Vanish transport/cast-gating test. Until then, keep that path recorded as accepted validation debt rather than inferred from the local debug presentation test.
 - Keep the current BoP/Cena path unchanged unless a reproducible failure is demonstrated.
 
 ## Deferred / Out of Scope
@@ -191,8 +192,8 @@
 - Broader public/multi-user security model.
 
 ## Release / Promotion Notes
-- Latest stable runtime release is `0.2.4` at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
-- Current `main` head is the same `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38` release commit.
+- Latest stable runtime release is `0.2.7` at `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
+- Current `main` head is the same `39382408bc6e24ab0ea541eb2e2ce9a67ddde914` release commit.
 - `main` and `dev` remain divergent histories. 0.1.10 was intentionally constructed directly on the existing main tree from checked stable blobs rather than merging dev, preserving main-only presentation content.
 - Main-only/presentation content to preserve:
   - current main `README.md` containing the artwork presentation;
@@ -206,4 +207,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Prepare and promote stable `0.2.7` directly on the current `main` tree from the accepted dev product delta: preserve main-only README/artwork, add `device.tga`/`device.wav`, strip all dev debug/docs, apply stable TOC metadata, perform available static validation, then update this document with the exact stable commit and remaining validation debt.
+No release work is pending. Use stable `0.2.7` normally; if the Vanish gag is tested with two real grouped clients, record successful/failed cast transport and receiver-gating results against stable commit `39382408...`. Otherwise continue with the next explicitly requested feature or fix.
