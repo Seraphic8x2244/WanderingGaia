@@ -4,9 +4,9 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.2.6-dev` (presentation tuning requested; next runtime revision will be `0.2.7-dev`).
-- Current runtime checkpoint: `0ab765ca1db1f2f62ffaff9beb52d8b9372b1b44` — implements the Rogue Vanish/device-disconnect gag, including cast/result pairing, `VANISH` transport, independent client presentation, dynamic sender title, and dev preview command.
-- Current `dev` head before the presentation-tuning change: `55a69a4707090ce8c095b95e533f9659c8a55a86`; `device.wav` and `device.tga` are both present and runtime-referenced.
+- Version: `0.2.7-dev`.
+- Current runtime checkpoint: `c4230674623c509381f29912769468bdadb9062f` — tunes the Vanish/device-disconnect presentation to 75% size, moves it 300 px left/down from screen centre, and removes the dynamic title shadow.
+- Current `dev` head before this status-only handoff update: `c4230674623c509381f29912769468bdadb9062f`; parent `d4ce8f45f1860f2acb554c25d3f914558c84f0be` documented the requested presentation tuning.
 - Stable runtime release: `0.2.4` at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Current `main` head: `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Goal: add a Rogue Vanish gag: when the ringer successfully casts Vanish, grouped/discovered clients show a fake Windows device-disconnect dialog using `artwork/device.tga`, overlay the authoritative remote sender name in the blank title bar, play `artwork/device.wav`, then auto-hide after about 3 seconds. Preserve the existing Ring Bell and BoP/Cena behavior.
@@ -71,10 +71,12 @@
 - The verified client aura determines the rank locally. Icon/glow lifetime is 6/8/10 s respectively; the matching audio continues only through its baked 0.5-second fade tail. The wire protocol remains `BOP:<recipient>`.
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
-- Vanish implementation: ClassicAPI successful-cast events are paired for Rogue Vanish spell IDs `1856` and `1857`. The ringer arms only while at least one positively discovered grouped client remains; only the matching successful result sends bare `VANISH`. Normal `CHAT_MSG_ADDON` sender/group gating still applies, clients accept only from a currently known ringer, and the displayed player name comes exclusively from authoritative sender `arg4`, never payload text. The presentation is independent of the BoP owner: `artwork/device.tga` supplies the dialog shell/body/button, only the title name is a live FontString, the sound path is `artwork/device.wav`, and the dialog auto-hides after 3 seconds. Requested tuning for the next revision: render the full gag at 75% of its current size, anchor it 300 px left and 300 px down from screen centre, and remove the title FontString shadow completely.
+- Vanish implementation: ClassicAPI successful-cast events are paired for Rogue Vanish spell IDs `1856` and `1857`. The ringer arms only while at least one positively discovered grouped client remains; only the matching successful result sends bare `VANISH`. Normal `CHAT_MSG_ADDON` sender/group gating still applies, clients accept only from a currently known ringer, and the displayed player name comes exclusively from authoritative sender `arg4`, never payload text. The presentation is independent of the BoP owner: `artwork/device.tga` supplies the dialog shell/body/button, only the title name is a live FontString, the sound path is `artwork/device.wav`, and the dialog auto-hides after 3 seconds. Current presentation is 384x96 (75% of 512x128), anchored `CENTER` at `-300, -300`, with title layout scaled to 75% and its shadow explicitly disabled.
 - Dev-only `/wg debug vanish` directly exercises the real Vanish presentation owner without transport/auth gates. It uses the current target name when available, otherwise the local player name, so title alignment can be tuned without repeated real Vanish casts.
 
 ## Recent Relevant Commits
+- `c4230674623c509381f29912769468bdadb9062f` — tune Vanish dialog to 75% size, offset -300/-300, remove title shadow, bump to `0.2.7-dev`.
+- `d4ce8f45f1860f2acb554c25d3f914558c84f0be` — document requested Vanish presentation tuning before code changes.
 - `0ab765ca1db1f2f62ffaff9beb52d8b9372b1b44` — implement Rogue Vanish disconnect gag and bump dev to `0.2.6-dev`.
 - `0cd6a4ed5db361ba6bd80f0d8395292bf97b5a25` — document Vanish design/implementation plan before runtime changes.
 - `92ed05821ea047ac8716cf9dd0d41e78f2eeb853` — user upload of the 512x128 blank-title Windows disconnect dialog as `artwork/device.tga` for the planned Vanish gag.
@@ -117,7 +119,7 @@
 - Local `/wg debug cena` presentation test on runtime `65ddb913...`: pfUI-style animation runs, sound is good, and location is correct. User accepts the current effect for the surprise release.
 
 ## Implemented / Awaiting Runtime Test
-- Dev `0.2.6-dev` implements the Vanish gag at runtime checkpoint `0ab765c...`: successful Rank 1/2 Vanish pairing, bare `VANISH` send/receive, authoritative sender-name title, 512x128 dialog presentation, 3-second lifetime, `device.wav` playback path, and `/wg debug vanish` local preview.
+- Dev `0.2.7-dev` keeps the existing Vanish trigger/transport semantics and applies only presentation tuning over the `0.2.6-dev` baseline: 384x96 dialog, `CENTER -300,-300`, shadowless sender title, 3-second lifetime, `device.wav`, and `/wg debug vanish` local preview.
 - `artwork/device.tga` and `artwork/device.wav` are both present on `dev`; the sound asset now matches the runtime path exactly.
 - The Vanish feature has not yet been exercised in-game, either through the debug presentation path or real two-client transport.
 - Stable 0.2.4 persists `runtimeMode` in `WanderingGaiaDB` and fixes the first demonstrated sender-side BoP target-token bug, but the user confirmed the real gag still fails.
@@ -144,7 +146,8 @@
 - For the 0.2.4-dev mode/BoP fix, ClassicAPI source review confirmed `UNIT_SPELLCAST_SENT` shape `(unitTarget, target, castGUID, spellID, ...)` with `target` explicitly documented as a unit token. Static review found no unresolved locale references or modern API regressions, top-level locals remain 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36039398457`; the temporary workflow was removed.
 - Stable 0.2.4 release prep stripped dev debug/docs, left 136 top-level local declarations, preserved main-only README/artwork, and passed the real verified Lua 5.0.2 compiler in Actions run `36040160338`. The checked stable Lua blob is `6e83fb7aa558caedf6a4621d62d1dd64cacc00a3`.
 - Dev 0.2.5 BoP trace build has no unresolved locale references or modern API regressions, top-level locals are 144, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36041044689`; the temporary workflow was removed.
-- Dev 0.2.6 Vanish static review found no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all current `L.*` references resolve; approximate top-level local-variable count is 154, below Lua 5.0's 200-local chunk limit. `device.tga` and `device.wav` are both present. A Lua 5.0 compiler pass has not been run for this revision yet, so compiler status is explicitly unverified.
+- Dev 0.2.6 Vanish static review found no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all current `L.*` references resolve; approximate top-level local-variable count is 154, below Lua 5.0's 200-local chunk limit. `device.tga` and `device.wav` are both present. A Lua 5.0 compiler pass was not run for that revision.
+- Dev 0.2.7 presentation-tuning static review likewise found no modern-API regressions or unresolved locale references; approximate top-level local-variable count remains 154. The requested 384x96 geometry, `-300,-300` anchor, zero-alpha/zero-offset title shadow, and 9 pt title font are present. Lua 5.0 compiler pass has not been run for 0.2.7-dev and remains unverified.
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
@@ -167,7 +170,7 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-1. On Gaia target Revenra and run `/wg debug vanish`; verify dialog size/placement, title-name alignment, ~3 second lifetime, and `device.wav` playback.
+1. On Gaia target Revenra and run `/wg debug vanish`; verify the new 75% dialog size, 300-left/300-down placement, shadowless readable title, ~3 second lifetime, and `device.wav` playback.
 2. Run a real two-client grouped test with Revenra in `/wg ringer` and Gaia in `/wg client`; a successful Rank 1 or Rank 2 Vanish should produce exactly one client popup titled with `Revenra` from addon-message sender identity.
 3. Confirm a failed/interrupted Vanish does not produce the gag and that existing Ring Bell / BoP behavior remains unchanged.
 
@@ -198,4 +201,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Apply the requested Vanish presentation tuning on `dev`: bump to `0.2.7-dev`, scale the 512x128 dialog and title layout to 75%, move the frame to `CENTER` offset `-300, -300`, explicitly remove the title shadow, then run static checks and re-test with `/wg debug vanish`.
+Run `/wg debug vanish` on Gaia with Revenra targeted and report whether the title is readable and whether the 75% size / `-300,-300` placement feel correct. Do not retune transport or other features based on this presentation-only test.
