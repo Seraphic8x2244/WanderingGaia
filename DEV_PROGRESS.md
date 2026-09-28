@@ -4,9 +4,9 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.2.6-dev`.
+- Version: `0.2.6-dev` (presentation tuning requested; next runtime revision will be `0.2.7-dev`).
 - Current runtime checkpoint: `0ab765ca1db1f2f62ffaff9beb52d8b9372b1b44` — implements the Rogue Vanish/device-disconnect gag, including cast/result pairing, `VANISH` transport, independent client presentation, dynamic sender title, and dev preview command.
-- Current `dev` head before this status-only handoff update: `c469cf5d66177afee69664583ed2fd11f4c0909b`; parent `6b85e25499b2e167bdebf04ca80779980c9b2fdc` uploaded the Windows hardware-remove WAV, and `c469cf5...` renamed it to the runtime-expected `artwork/device.wav`.
+- Current `dev` head before the presentation-tuning change: `55a69a4707090ce8c095b95e533f9659c8a55a86`; `device.wav` and `device.tga` are both present and runtime-referenced.
 - Stable runtime release: `0.2.4` at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Current `main` head: `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Goal: add a Rogue Vanish gag: when the ringer successfully casts Vanish, grouped/discovered clients show a fake Windows device-disconnect dialog using `artwork/device.tga`, overlay the authoritative remote sender name in the blank title bar, play `artwork/device.wav`, then auto-hide after about 3 seconds. Preserve the existing Ring Bell and BoP/Cena behavior.
@@ -71,7 +71,7 @@
 - The verified client aura determines the rank locally. Icon/glow lifetime is 6/8/10 s respectively; the matching audio continues only through its baked 0.5-second fade tail. The wire protocol remains `BOP:<recipient>`.
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
-- Vanish implementation: ClassicAPI successful-cast events are paired for Rogue Vanish spell IDs `1856` and `1857`. The ringer arms only while at least one positively discovered grouped client remains; only the matching successful result sends bare `VANISH`. Normal `CHAT_MSG_ADDON` sender/group gating still applies, clients accept only from a currently known ringer, and the displayed player name comes exclusively from authoritative sender `arg4`, never payload text. The presentation is independent of the BoP owner: `artwork/device.tga` is the full 512x128 dialog shell/body/button, only the title name is a live FontString, the sound path is `artwork/device.wav`, and the dialog auto-hides after 3 seconds. No reconnect gag is implemented.
+- Vanish implementation: ClassicAPI successful-cast events are paired for Rogue Vanish spell IDs `1856` and `1857`. The ringer arms only while at least one positively discovered grouped client remains; only the matching successful result sends bare `VANISH`. Normal `CHAT_MSG_ADDON` sender/group gating still applies, clients accept only from a currently known ringer, and the displayed player name comes exclusively from authoritative sender `arg4`, never payload text. The presentation is independent of the BoP owner: `artwork/device.tga` supplies the dialog shell/body/button, only the title name is a live FontString, the sound path is `artwork/device.wav`, and the dialog auto-hides after 3 seconds. Requested tuning for the next revision: render the full gag at 75% of its current size, anchor it 300 px left and 300 px down from screen centre, and remove the title FontString shadow completely.
 - Dev-only `/wg debug vanish` directly exercises the real Vanish presentation owner without transport/auth gates. It uses the current target name when available, otherwise the local player name, so title alignment can be tuned without repeated real Vanish casts.
 
 ## Recent Relevant Commits
@@ -198,4 +198,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Target Revenra on Gaia and run `/wg debug vanish` on `0.2.6-dev` to validate the dialog/title/sound/lifetime before attempting the real two-client Vanish trigger. Do not change transport or presentation further until that runtime result is known.
+Apply the requested Vanish presentation tuning on `dev`: bump to `0.2.7-dev`, scale the 512x128 dialog and title layout to 75%, move the frame to `CENTER` offset `-300, -300`, explicitly remove the title shadow, then run static checks and re-test with `/wg debug vanish`.
