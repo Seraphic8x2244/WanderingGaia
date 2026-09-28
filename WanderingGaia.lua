@@ -12,6 +12,16 @@ local RING_SOUND_DURATION = 1.57
 local RING_THROTTLE = RING_SOUND_DURATION * 2
 local POSITION_REQUEST_INTERVAL = 1.0
 
+local VANISH = {
+    spellIDSet = {
+        [1856] = true,
+        [1857] = true,
+    },
+    texture = "Interface\\AddOns\\WanderingGaia\\artwork\\device",
+    sound = "Interface\\AddOns\\WanderingGaia\\artwork\\device.wav",
+    duration = 3.0,
+}
+
 local BOP = {
     spellIDs = { 1022, 5599, 10278 },
     spellIDSet = {
@@ -97,6 +107,14 @@ local knownRingers = {}
 local outgoingRings = {}
 local incomingRings = {}
 local pendingBopCast = nil
+local pendingVanishCast = nil
+local vanishPresentation = {
+    frame = nil,
+    title = nil,
+    active = false,
+    startedAt = 0,
+    duration = 0,
+}
 local bopPresentation = {
     frame = nil,
     icon = nil,
@@ -723,6 +741,69 @@ local function SendComm(message)
     return true
 end
 
+local function EnsureVanishPresentation()
+    if vanishPresentation.frame then
+        return
+    end
+
+    local frame = CreateFrame("Frame", "WanderingGaiaVanishPresentation", UIParent)
+    frame:SetWidth(512)
+    frame:SetHeight(128)
+    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    frame:SetFrameStrata("DIALOG")
+    frame:Hide()
+
+    local texture = frame:CreateTexture(nil, "ARTWORK")
+    texture:SetAllPoints(frame)
+    texture:SetTexture(VANISH.texture)
+
+    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 25, -2)
+    title:SetWidth(360)
+    title:SetHeight(20)
+    title:SetJustifyH("LEFT")
+    title:SetJustifyV("MIDDLE")
+    title:SetTextColor(0, 0, 0)
+    title:SetFont("Fonts\\ARIALN.TTF", 12)
+
+    vanishPresentation.frame = frame
+    vanishPresentation.title = title
+end
+
+local function StopVanishPresentation()
+    vanishPresentation.active = false
+    vanishPresentation.startedAt = 0
+    vanishPresentation.duration = 0
+
+    if vanishPresentation.frame then
+        vanishPresentation.frame:Hide()
+    end
+end
+
+local function StartVanishPresentation(sender)
+    EnsureVanishPresentation()
+
+    vanishPresentation.active = true
+    vanishPresentation.startedAt = GetTime()
+    vanishPresentation.duration = VANISH.duration
+    vanishPresentation.title:SetText(sender or "")
+    vanishPresentation.frame:Show()
+
+    if type(PlaySoundFile) == "function" then
+        PlaySoundFile(VANISH.sound)
+    end
+end
+
+local function UpdateVanishPresentation()
+    if not vanishPresentation.active then
+        return
+    end
+
+    if GetTime() - vanishPresentation.startedAt >= vanishPresentation.duration then
+        StopVanishPresentation()
+    end
+end
+
 local function EnsureBopPresentation()
     if bopPresentation.frame then
         return
@@ -950,6 +1031,61 @@ local function UpdateBopPresentation()
             animation:Hide()
         end
     end
+end
+
+local function HasKnownGroupedClient()
+    local name, known
+
+    for name, known in pairs(knownClients) do
+        if known and GroupUnitForName(name) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function HandleVanishSpellcastSent(unit, target, castGUID, spellID)
+    pendingVanishCast = nil
+    spellID = tonumber(spellID)
+
+    if runtimeMode ~= "ringer"
+        or unit ~= "player"
+        or not spellID
+        or not VANISH.spellIDSet[spellID]
+        or not HasKnownGroupedClient()
+    then
+        return
+    end
+
+    pendingVanishCast = {
+        castGUID = castGUID,
+        spellID = spellID,
+    }
+end
+
+local function HandleVanishSpellcastResult(succeeded, unit, castGUID, spellID)
+    local pending = pendingVanishCast
+    spellID = tonumber(spellID)
+
+    if not pending or unit ~= "player" then
+        return
+    end
+
+    if castGUID ~= pending.castGUID or spellID ~= pending.spellID then
+        return
+    end
+
+    pendingVanishCast = nil
+
+    if not succeeded
+        or runtimeMode ~= "ringer"
+        or not HasKnownGroupedClient()
+    then
+        return
+    end
+
+    SendComm("VANISH")
 end
 
 local function HandleBopSpellcastSent(unit, target, castGUID, spellID)
@@ -1476,6 +1612,13 @@ local function ProcessCommMessage(sender, message, simulated)
     if positionRecipient then
         if not simulated then
             ApplyRemotePosition(sender, positionRecipient, mapText, westText, northText, zText)
+        end
+        return
+    end
+
+    if message == "VANISH" then
+        if runtimeMode == "client" and knownRingers[sender] then
+            StartVanishPresentation(sender)
         end
         return
     end
@@ -2489,6 +2632,14 @@ local function HandleDebugCommand(remainder)
 
         StartBopPresentation({ icon = BOP.fallbackIcon }, BOP.spellIDs[rank])
         PrintMessage(string.format(L.DEBUG_CENA_STARTED, rank))
+    elseif command == "vanish" then
+        local sender = UnitName("player") or "Rogue"
+        if UnitExists("target") and UnitName("target") then
+            sender = UnitName("target")
+        end
+
+        StartVanishPresentation(sender)
+        PrintMessage(string.format(L.DEBUG_VANISH_STARTED, sender))
     elseif command == "boptrace" then
         if argument == "on" then
             debugBopTrace = true
@@ -2513,13 +2664,18 @@ driver:SetScript("OnUpdate", function()
     local incomingActive = HasActiveIncomingRings()
     local controlActive = ControlRingActive()
     local bopActive = bopPresentation.active or (bopPresentation.pending and true or false)
+    local vanishActive = vanishPresentation.active
 
-    if not testEnabled and not coordsEnabled and not incomingActive and not controlActive and not bopActive then
+    if not testEnabled and not coordsEnabled and not incomingActive and not controlActive and not bopActive and not vanishActive then
         return
     end
 
     if bopActive then
         UpdateBopPresentation()
+    end
+
+    if vanishActive then
+        UpdateVanishPresentation()
     end
 
     positionElapsed = positionElapsed + arg1
@@ -2613,13 +2769,16 @@ events:SetScript("OnEvent", function()
         UpdateControlButton()
     elseif event == "UNIT_SPELLCAST_SENT" then
         HandleBopSpellcastSent(arg1, arg2, arg3, arg4)
+        HandleVanishSpellcastSent(arg1, arg2, arg3, arg4)
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         HandleBopSpellcastResult(true, arg1, arg2, arg3)
+        HandleVanishSpellcastResult(true, arg1, arg2, arg3)
     elseif event == "UNIT_SPELLCAST_INTERRUPTED"
         or event == "UNIT_SPELLCAST_FAILED"
         or event == "UNIT_SPELLCAST_FAILED_QUIET"
     then
         HandleBopSpellcastResult(false, arg1, arg2, arg3)
+        HandleVanishSpellcastResult(false, arg1, arg2, arg3)
     elseif event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
         RefreshGroupState()
     end
