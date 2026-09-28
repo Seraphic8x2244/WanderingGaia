@@ -4,13 +4,13 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.2.5-dev`
+- Version: `0.2.5-dev` (pre-Vanish implementation; the next runtime revision will bump to `0.2.6-dev`).
 - Current runtime checkpoint: `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e` — adds dev-only BoP gate tracing across sender cast pairing/send, receiver receipt/gating, and aura/source verification; product behavior is unchanged from the 0.2.4 runtime fix.
-- Current `dev` head before this handoff update: `c68b7f5f1d9c2aef703b3efc210ce959ea3c777b`; later commits after the runtime checkpoint are one-shot Lua checker add/remove housekeeping only and no temporary workflow remains.
+- Current `dev` head before the Vanish implementation: `92ed05821ea047ac8716cf9dd0d41e78f2eeb853` — user upload of `artwork/device.tga`; parent `22ea02969fca63c6f426ad55372fe93d1b0ee3a8` synchronized the canonical development rulebook.
 - Stable runtime release: `0.2.4` at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Current `main` head: `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
-- Goal: fix the demonstrated real-use BoP/Cena failure and persist the selected ringer/client mode across reloads/restarts, without changing proven Ring Bell behavior or broadening scope.
-- Current scope boundary: testing and targeted fixes only. Do not retune proven geometry without runtime evidence, and do not start options/minimap/framework/public multi-user security work.
+- Goal: add a Rogue Vanish gag: when the ringer successfully casts Vanish, grouped/discovered clients show a fake Windows device-disconnect dialog using `artwork/device.tga`, overlay the authoritative remote sender name in the blank title bar, play `artwork/device.wav`, then auto-hide after about 3 seconds. Preserve the existing Ring Bell and BoP/Cena behavior.
+- Current scope boundary: implement and test only the Vanish gag plus its dev debug path. Do not retune proven geometry, alter BoP/Cena behavior without new evidence, or start options/minimap/framework/public multi-user security work.
 
 ## Current Design / Development Contract
 
@@ -71,8 +71,11 @@
 - The verified client aura determines the rank locally. Icon/glow lifetime is 6/8/10 s respectively; the matching audio continues only through its baked 0.5-second fade tail. The wire protocol remains `BOP:<recipient>`.
 - Dev-only `/wg debug discover|ring|off|state|clear` exercises local state/UI paths but does not prove PARTY/RAID transport.
 - Dev-only `/wg debug cena [1|2|3]` is implemented (rank 3 when omitted) and is intentionally mode-agnostic on `dev`: it must work while the tester is in either `/wg ringer` or `/wg client`. It calls the same `StartBopPresentation` owner used by a real verified BoP, supplying only a synthetic local icon and selected BoP spell ID. It therefore exercises the real icon position/size, proc glow, rank lifetime and WAV selection while intentionally bypassing network/cast/aura authentication; it does not test those gates. This debug exception does not relax the real ringer -> client BoP invariant.
+- Vanish design for the next runtime revision: ClassicAPI successful-cast events will be matched for Rogue Vanish spell IDs `1856` and `1857`; the sender name will never be trusted from payload text and will come from `CHAT_MSG_ADDON arg4` on the client. The presentation is independent of the BoP owner: `artwork/device.tga` is the full 512x128 dialog shell/body/button, only the title name is a live FontString, the planned sound is `artwork/device.wav`, and the dialog auto-hides after roughly 3 seconds. No reconnect gag is planned.
 
 ## Recent Relevant Commits
+- `92ed05821ea047ac8716cf9dd0d41e78f2eeb853` — user upload of the 512x128 blank-title Windows disconnect dialog as `artwork/device.tga` for the planned Vanish gag.
+- `22ea02969fca63c6f426ad55372fe93d1b0ee3a8` — synchronize canonical development rulebook; runtime unchanged.
 - `4e45dc94d8acd347fb15fd1e38579fe1a1c7755e` — complete dev-only BoP trace coverage including pre-group receive gate.
 - `73220bec7a4b11321b0656f1880994ad31429b4a` — add dev-only `/wg debug boptrace on|off` tracing for sender/result/send, receiver BOP gate, and aura timeout/source state.
 - `b316ee4b0a8ca2febf5b998d90b6b29a6c670d1b` — bump dev version to 0.2.5-dev for diagnostics.
@@ -111,6 +114,7 @@
 - Local `/wg debug cena` presentation test on runtime `65ddb913...`: pfUI-style animation runs, sound is good, and location is correct. User accepts the current effect for the surprise release.
 
 ## Implemented / Awaiting Runtime Test
+- Vanish gag pre-implementation asset state: `artwork/device.tga` is present on `dev`; `artwork/device.wav` is the agreed sound filename but is not yet present at this checkpoint. No Vanish runtime code has been committed yet.
 - Stable 0.2.4 persists `runtimeMode` in `WanderingGaiaDB` and fixes the first demonstrated sender-side BoP target-token bug, but the user confirmed the real gag still fails.
 - Dev 0.2.5 adds diagnostics only; product behavior remains unchanged from 0.2.4. `/wg debug boptrace on|off` reports:
   - sender SENT/raw target resolution, discovery/group gate, cast result pairing, and BOP send result;
@@ -157,12 +161,16 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-No targeted BoP/audio retest is required from the current evidence. Keep using the addon normally; only reopen the audio path if a repeatable miss can be reproduced with a known BoP rank and `/wg debug cena <rank>` on the same client.
+1. After the Vanish implementation lands, use the dev-only local Vanish presentation command to verify the 512x128 dialog size/placement, title-name alignment, ~3 second lifetime, and `device.wav` playback.
+2. Then run a real two-client grouped test with the rogue in `/wg ringer` and Gaia in `/wg client`; a successful Rank 1 or Rank 2 Vanish should produce exactly one client popup using the ringer name from addon-message sender identity.
+3. Confirm failed/interrupted casts do not produce the gag and that existing Ring Bell / BoP behavior is unchanged.
 
 ## Planned / Next Work
-- Treat the current BoP/Cena path as working unless a reproducible failure is demonstrated.
-- Do not change sound, transport, gating, or presentation based on inconsistent one-off reports.
-- If a future miss is reproducible, capture its exact rank plus dev trace before changing runtime behavior.
+- Bump the addon to `0.2.6-dev` as part of the Vanish runtime revision.
+- Implement successful-cast pairing for Vanish spell IDs `1856` and `1857`, preserving the existing ClassicAPI event model.
+- Add a small independent Vanish presentation owner and dev-only local preview command; do not fold it into `StartBopPresentation`.
+- Add/accept the planned `artwork/device.wav` asset and reference it directly from the presentation.
+- Keep the current BoP/Cena path unchanged unless a reproducible failure is demonstrated.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -186,4 +194,4 @@ No targeted BoP/audio retest is required from the current evidence. Keep using t
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-No code change is currently warranted. Leave dev 0.2.5-dev as the working diagnostic checkpoint and observe normal use. Reopen BoP/Cena only if a reproducible failure is demonstrated; otherwise the next work should be whatever new feature or release task the user explicitly requests.
+Implement the Vanish gag on `dev`: bump to `0.2.6-dev`, add successful Vanish cast pairing/send/receive gates, render `artwork/device.tga` with the authoritative sender name overlaid in the title bar, play `artwork/device.wav`, auto-hide after about 3 seconds, add a dev-only local preview command, then run static/compiler checks before the first in-game presentation test.
