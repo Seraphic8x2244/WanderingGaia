@@ -747,9 +747,9 @@ local function EnsureVanishPresentation()
     end
 
     local frame = CreateFrame("Frame", "WanderingGaiaVanishPresentation", UIParent)
-    frame:SetWidth(512)
-    frame:SetHeight(128)
-    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    frame:SetWidth(384)
+    frame:SetHeight(96)
+    frame:SetPoint("CENTER", UIParent, "CENTER", -300, -300)
     frame:SetFrameStrata("DIALOG")
     frame:Hide()
 
@@ -758,13 +758,15 @@ local function EnsureVanishPresentation()
     texture:SetTexture(VANISH.texture)
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 25, -2)
-    title:SetWidth(360)
-    title:SetHeight(20)
+    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18.75, -1.5)
+    title:SetWidth(270)
+    title:SetHeight(15)
     title:SetJustifyH("LEFT")
     title:SetJustifyV("MIDDLE")
     title:SetTextColor(0, 0, 0)
-    title:SetFont("Fonts\\ARIALN.TTF", 12)
+    title:SetShadowColor(0, 0, 0, 0)
+    title:SetShadowOffset(0, 0)
+    title:SetFont("Fonts\\ARIALN.TTF", 9)
 
     vanishPresentation.frame = frame
     vanishPresentation.title = title
