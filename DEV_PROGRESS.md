@@ -6,7 +6,7 @@
 - Branch: `dev`
 - Version: `0.2.6-dev`.
 - Current runtime checkpoint: `0ab765ca1db1f2f62ffaff9beb52d8b9372b1b44` — implements the Rogue Vanish/device-disconnect gag, including cast/result pairing, `VANISH` transport, independent client presentation, dynamic sender title, and dev preview command.
-- Current `dev` head before this status-only handoff update: `0ab765ca1db1f2f62ffaff9beb52d8b9372b1b44`; parent `0cd6a4ed5db361ba6bd80f0d8395292bf97b5a25` documented the implementation plan, and `92ed05821ea047ac8716cf9dd0d41e78f2eeb853` added `artwork/device.tga`.
+- Current `dev` head before this status-only handoff update: `c469cf5d66177afee69664583ed2fd11f4c0909b`; parent `6b85e25499b2e167bdebf04ca80779980c9b2fdc` uploaded the Windows hardware-remove WAV, and `c469cf5...` renamed it to the runtime-expected `artwork/device.wav`.
 - Stable runtime release: `0.2.4` at `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Current `main` head: `1ca98f4e3ca43cf82bee2e482ea9f026dddb9d38`.
 - Goal: add a Rogue Vanish gag: when the ringer successfully casts Vanish, grouped/discovered clients show a fake Windows device-disconnect dialog using `artwork/device.tga`, overlay the authoritative remote sender name in the blank title bar, play `artwork/device.wav`, then auto-hide after about 3 seconds. Preserve the existing Ring Bell and BoP/Cena behavior.
@@ -118,7 +118,7 @@
 
 ## Implemented / Awaiting Runtime Test
 - Dev `0.2.6-dev` implements the Vanish gag at runtime checkpoint `0ab765c...`: successful Rank 1/2 Vanish pairing, bare `VANISH` send/receive, authoritative sender-name title, 512x128 dialog presentation, 3-second lifetime, `device.wav` playback path, and `/wg debug vanish` local preview.
-- `artwork/device.tga` is present. `artwork/device.wav` is still absent from `dev` at this checkpoint, so sound playback cannot succeed until that agreed asset is uploaded.
+- `artwork/device.tga` and `artwork/device.wav` are both present on `dev`; the sound asset now matches the runtime path exactly.
 - The Vanish feature has not yet been exercised in-game, either through the debug presentation path or real two-client transport.
 - Stable 0.2.4 persists `runtimeMode` in `WanderingGaiaDB` and fixes the first demonstrated sender-side BoP target-token bug, but the user confirmed the real gag still fails.
 - Dev 0.2.5 adds diagnostics only; product behavior remains unchanged from 0.2.4. `/wg debug boptrace on|off` reports:
@@ -144,7 +144,7 @@
 - For the 0.2.4-dev mode/BoP fix, ClassicAPI source review confirmed `UNIT_SPELLCAST_SENT` shape `(unitTarget, target, castGUID, spellID, ...)` with `target` explicitly documented as a unit token. Static review found no unresolved locale references or modern API regressions, top-level locals remain 142, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36039398457`; the temporary workflow was removed.
 - Stable 0.2.4 release prep stripped dev debug/docs, left 136 top-level local declarations, preserved main-only README/artwork, and passed the real verified Lua 5.0.2 compiler in Actions run `36040160338`. The checked stable Lua blob is `6e83fb7aa558caedf6a4621d62d1dd64cacc00a3`.
 - Dev 0.2.5 BoP trace build has no unresolved locale references or modern API regressions, top-level locals are 144, and the real verified Lua 5.0.2 `luac -p` pass succeeded in Actions run `36041044689`; the temporary workflow was removed.
-- Dev 0.2.6 Vanish static review found no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all current `L.*` references resolve; approximate top-level local-variable count is 154, below Lua 5.0's 200-local chunk limit. `device.tga` is present and `device.wav` is absent. A Lua 5.0 compiler pass has not been run for this revision yet, so compiler status is explicitly unverified.
+- Dev 0.2.6 Vanish static review found no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; all current `L.*` references resolve; approximate top-level local-variable count is 154, below Lua 5.0's 200-local chunk limit. `device.tga` and `device.wav` are both present. A Lua 5.0 compiler pass has not been run for this revision yet, so compiler status is explicitly unverified.
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
@@ -167,12 +167,11 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-1. Upload the agreed `artwork/device.wav` asset, then on Gaia target Revenra and run `/wg debug vanish`; verify dialog size/placement, title-name alignment, ~3 second lifetime, and sound playback.
+1. On Gaia target Revenra and run `/wg debug vanish`; verify dialog size/placement, title-name alignment, ~3 second lifetime, and `device.wav` playback.
 2. Run a real two-client grouped test with Revenra in `/wg ringer` and Gaia in `/wg client`; a successful Rank 1 or Rank 2 Vanish should produce exactly one client popup titled with `Revenra` from addon-message sender identity.
 3. Confirm a failed/interrupted Vanish does not produce the gag and that existing Ring Bell / BoP behavior remains unchanged.
 
 ## Planned / Next Work
-- Add/accept the agreed `artwork/device.wav` asset; runtime code already references that exact path.
 - Run `/wg debug vanish` and tune only presentation coordinates/font sizing if the in-game image proves misaligned.
 - After local presentation passes, run the real two-client successful/failed Vanish transport test.
 - Keep the current BoP/Cena path unchanged unless a reproducible failure is demonstrated.
@@ -193,10 +192,10 @@
   - `artwork/wanderinggaia.png`;
   - `artwork/wanderinggaia2.png`.
 - Stable 0.2.4 excludes the integrated dev debug harness, `DEV_PROGRESS.md`, and `dev_rulebook.md`, preserving the established release convention.
-- Runtime assets that must remain present when relevant are `artwork/WanderingGaia_BellSwing_256x64.tga`, `artwork/gaiasbell.wav`, the accepted BoP/Cena WAVs (`cena_r1.wav`, `cena_r2.wav`, `cena.wav`), and for the Vanish slice `artwork/device.tga` plus the still-to-be-uploaded `artwork/device.wav`.
+- Runtime assets that must remain present when relevant are `artwork/WanderingGaia_BellSwing_256x64.tga`, `artwork/gaiasbell.wav`, the accepted BoP/Cena WAVs (`cena_r1.wav`, `cena_r2.wav`, `cena.wav`), and for the Vanish slice `artwork/device.tga` plus `artwork/device.wav`.
 - Known validation debt accepted for the already released 0.1.9: its new sender-control/long-range refinement delta was promoted without a separate two-client verification pass.
 - For 0.1.10, the user explicitly authorized promotion after accepting the current presentation/audio result as good enough for the surprise. Release validation debt: the real two-client BoP transport/success/auth/aura-caster positive/negative gating has not been runtime-tested; Ring Bell remains user-verified and the BoP presentation/audio debug path has been exercised locally.
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Upload `artwork/device.wav`, then target Revenra on Gaia and run `/wg debug vanish` on `0.2.6-dev` to validate the dialog/title/sound/lifetime before attempting the real two-client Vanish trigger. Do not change transport or presentation further until that runtime result is known.
+Target Revenra on Gaia and run `/wg debug vanish` on `0.2.6-dev` to validate the dialog/title/sound/lifetime before attempting the real two-client Vanish trigger. Do not change transport or presentation further until that runtime result is known.
