@@ -7,8 +7,8 @@
 - Version: `0.2.9-dev`.
 - Current runtime checkpoint: `3fb7623af990ef348f6fef30ba7b46a33d39f1ef` — `0.2.9-dev` replaces roster-driven discovery with the HELLO handshake.
 - Current `dev` head before this status-only handoff update: `3fb7623af990ef348f6fef30ba7b46a33d39f1ef`; preceding commits `62004ea42fa6dbaa7da567c259a5563276643d36` bumped the dev version and `17d06bdf6c773029fb24f9b8d4de41d7a4d978cb` documented the redesign.
-- Stable runtime release: `0.2.7` at `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
-- Current `main` head: `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
+- Stable runtime release: `0.2.9` at `53772d6bec57202a43c3d66c4b910e57cfb1cdce`.
+- Current `main` head: `53772d6bec57202a43c3d66c4b910e57cfb1cdce`.
 - Goal: replace roster-driven discovery with a one-time `HELLO` peer handshake so ordinary raid/party roster churn causes no WanderingGaia discovery traffic, while preserving Ring Bell, remote-position, BoP/Cena and Vanish behavior.
 - Current scope boundary: change only discovery/mode presence protocol and group-membership announcement scheduling. Keep PARTY/RAID `SendAddonMessage`, authoritative `arg4` sender identity, and every non-discovery protocol/feature unchanged.
 
@@ -77,6 +77,8 @@
 - Dev-only `/wg debug vanish` directly exercises the real Vanish presentation owner without transport/auth gates. It uses the current target name when available, otherwise the local player name, so title alignment can be tuned without repeated real Vanish casts.
 
 ## Recent Relevant Commits
+- `53772d6bec57202a43c3d66c4b910e57cfb1cdce` — stable `0.2.9` release metadata on `main` after HELLO runtime promotion.
+- `f2a7b19ca83b8ca00b3af885fcf9eb7bf2cbba6c` — promote the HELLO discovery runtime delta directly onto the stable `main` tree.
 - `3fb7623af990ef348f6fef30ba7b46a33d39f1ef` — replace roster-driven discovery with HELLO broadcast/addressed-reply handshake; remove 0.2.8 debounce/throttle machinery.
 - `62004ea42fa6dbaa7da567c259a5563276643d36` — bump development version to `0.2.9-dev`.
 - `17d06bdf6c773029fb24f9b8d4de41d7a4d978cb` — document HELLO discovery redesign and 0.2.8 qualitative runtime result before implementation.
@@ -128,6 +130,7 @@
 - Local `/wg debug vanish` presentation test on `0.2.7-dev` / `c423067...`: user accepted the 75% dialog size, `CENTER -300,-300` placement, shadowless dynamic sender title, 3-second lifetime, and current device artwork/sound combination. This exact presentation/product delta was promoted to stable 0.2.7.
 
 ## Implemented / Awaiting Runtime Test
+- Stable `0.2.9` at `53772d6...` now contains the HELLO discovery runtime without the dev debug harness/docs. Same-channel raid roster churn is runtime-verified at zero WG discovery messages using the 8-bot reproduction. The two-current-WG-peer HELLO broadcast/addressed-reply handshake remains untested runtime debt.
 - `0.2.9-dev` / `3fb7623...` implements HELLO discovery. Local addon load while grouped, PARTY<->RAID/solo group-channel transition, and mode change/reassertion send one `HELLO:<mode>`; an opposite-mode peer records the sender and answers once with addressed `HELLO:<mode>:<recipient>`. Same-channel roster churn performs cleanup only. This delta is implemented/static-reviewed but has not yet received an in-game traffic/discovery test.
 - Stable `0.2.7` at `39382408...` contains the accepted Vanish product path: successful Rank 1/2 Vanish pairing, bare `VANISH` transport, authoritative sender-name title, 384x96 dialog at `CENTER -300,-300`, shadowless title, 3-second lifetime, and `device.wav`. The stable tree excludes the dev debug preview/trace harness.
 - `artwork/device.tga` and `artwork/device.wav` are both present on `dev`; the sound asset now matches the runtime path exactly.
@@ -141,6 +144,7 @@
 - Ring Bell remains user-verified and the BoP/Cena presentation/audio path remains locally user-tested and accepted.
 
 ## Static / Automated Checks
+- Stable `0.2.9` release review: `main` diff from stable `0.2.7` is limited to `WanderingGaia.lua` HELLO discovery runtime plus `WanderingGaia.toc` version metadata; stable TOC is `WanderingGaia` / `0.2.9`; no dev docs/debug symbols are present; main-only README/presentation artwork and all required runtime assets remain present; all stable `L.*` references resolve; no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency is present; approximate top-level local declaration lines are 149. No Lua 5.0 compiler pass was run for this release, so compiler status remains unverified rather than passed.
 - `0.2.9-dev` static review at `3fb7623...`: TOC is `WanderingGaia-dev` / `0.2.9-dev`; no `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency; approximate top-level local declaration lines are 157, below Lua 5.0's 200-local chunk limit; all temporary `0.2.8-dev` discovery debounce/throttle symbols are absent; current non-discovery `SendComm` sites remain Ring/Vanish/BoP/POS/CANCEL paths plus the intentional legacy `MODE:C` reply to an incoming old `Q`. No locale strings were added or changed. A canonical Lua 5.0 compiler pass was not run because this chat has repository-connector access but no executable checkout/checker environment; compiler status is therefore unverified, not passed.
 - 0.1.9 Ring Bell audit confirmed the documented mirrored control placement, active-only animation, 3.14-second per-recipient re-ring throttle, immediate right-click stop, local-position-first behavior, one-per-second `POSQ`, and active-ring-gated `POS` replies.
 - Current 0.2.5-dev trace code has no newly introduced `RegisterAddonMessagePrefix`, `C_ChatInfo`, `C_Timer`, or `string.match` dependency.
@@ -191,9 +195,9 @@
 3. Change/reassert `/wg ringer` or `/wg client` while grouped and confirm one fresh HELLO handshake occurs without a repeating message loop.
 
 ## Planned / Next Work
-- User explicitly authorized promotion of the runtime-tested HELLO discovery slice to stable `main`.
-- Prepare stable `0.2.9` directly on the current `main` tree rather than merging divergent `dev`: apply only the HELLO discovery/runtime delta, preserve main-only README/presentation artwork, keep dev debug/docs out of stable, and leave Ring Bell/POSQ/POS/BoP/Cena/Vanish behavior unchanged.
-- Record remaining validation debt accurately: zero-spam same-channel roster churn is runtime-verified; two-WG-client HELLO reply/discovery remains untested unless completed before release.
+- Stable `0.2.9` is released on `main`; no further release action is pending.
+- When convenient, runtime-test one ringer + one client on current `0.2.9` and confirm one broadcast HELLO plus one addressed reply with no loop, then confirm Ring Bell discovery still works.
+- Keep the existing Ring Bell/POSQ/POS/BoP/Cena/Vanish behavior unchanged unless new reproducible evidence requires a targeted fix.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -203,8 +207,8 @@
 - Broader public/multi-user security model.
 
 ## Release / Promotion Notes
-- Latest stable runtime release is `0.2.7` at `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
-- Current `main` head is the same `39382408bc6e24ab0ea541eb2e2ce9a67ddde914` release commit.
+- Latest stable runtime release is `0.2.9` at `53772d6bec57202a43c3d66c4b910e57cfb1cdce`.
+- Current `main` head is the same `53772d6bec57202a43c3d66c4b910e57cfb1cdce` release commit.
 - `main` and `dev` remain divergent histories. 0.1.10 was intentionally constructed directly on the existing main tree from checked stable blobs rather than merging dev, preserving main-only presentation content.
 - Main-only/presentation content to preserve:
   - current main `README.md` containing the artwork presentation;
@@ -218,4 +222,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Promote stable `0.2.9` now from the current `main` tree: apply the HELLO discovery changes only, bump stable TOC metadata to `0.2.9`, perform available static review, move `main`, then update this document with the exact stable commit and remaining validation debt.
+Use stable `0.2.9` normally. If doing further validation, run the remaining two-WG-peer HELLO handshake/discovery check and record whether Ring Bell targeting is discovered correctly with no repeating HELLO loop.
