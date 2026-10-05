@@ -11,6 +11,8 @@ local COMM_PREFIX = "WanderingGaia"
 local RING_SOUND_DURATION = 1.57
 local RING_THROTTLE = RING_SOUND_DURATION * 2
 local POSITION_REQUEST_INTERVAL = 1.0
+local GROUP_ANNOUNCE_DELAY = 1.0
+local DISCOVERY_REPLY_THROTTLE = 1.0
 
 local VANISH = {
     spellIDSet = {
@@ -133,6 +135,9 @@ local controlTexture = nil
 local controlAnimationElapsed = 0
 local controlAnimationIndex = 1
 local lastRingSentAt = {}
+local groupAnnouncementPending = false
+local groupAnnouncementElapsed = 0
+local lastClientAnnouncementAt = nil
 local HandleControlClick
 
 local ApplyConfigFields
@@ -739,6 +744,42 @@ local function SendComm(message)
 
     SendAddonMessage(COMM_PREFIX, message, channel)
     return true
+end
+
+local function SendClientAnnouncement(force)
+    local now = GetTime()
+
+    if not force
+        and lastClientAnnouncementAt
+        and (now - lastClientAnnouncementAt) < DISCOVERY_REPLY_THROTTLE
+    then
+        return false
+    end
+
+    if not SendComm("MODE:C") then
+        return false
+    end
+
+    lastClientAnnouncementAt = now
+    groupAnnouncementPending = false
+    groupAnnouncementElapsed = 0
+    return true
+end
+
+local function ScheduleGroupAnnouncement()
+    groupAnnouncementPending = true
+    groupAnnouncementElapsed = 0
+end
+
+local function AnnounceGroupState()
+    groupAnnouncementPending = false
+    groupAnnouncementElapsed = 0
+
+    if runtimeMode == "ringer" then
+        SendComm("Q")
+    else
+        SendClientAnnouncement(false)
+    end
 end
 
 local function EnsureVanishPresentation()
@@ -1557,7 +1598,7 @@ local function ProcessCommMessage(sender, message, simulated)
     if message == "Q" then
         if runtimeMode == "client" and not simulated then
             knownRingers[sender] = true
-            SendComm("MODE:C")
+            SendClientAnnouncement(false)
         end
         return
     end
@@ -1714,6 +1755,9 @@ local function SetRuntimeMode(mode)
         return
     end
 
+    groupAnnouncementPending = false
+    groupAnnouncementElapsed = 0
+
     if type(WanderingGaiaDB) == "table" then
         WanderingGaiaDB.runtimeMode = mode
     end
@@ -1723,7 +1767,7 @@ local function SetRuntimeMode(mode)
             SendComm("Q")
             PrintMessage(L.MODE_RINGER)
         else
-            SendComm("MODE:C")
+            SendClientAnnouncement(true)
             PrintMessage(L.MODE_CLIENT)
         end
 
@@ -1758,7 +1802,7 @@ local function SetRuntimeMode(mode)
         SendComm("Q")
         PrintMessage(L.MODE_RINGER)
     else
-        SendComm("MODE:C")
+        SendClientAnnouncement(true)
         PrintMessage(L.MODE_CLIENT)
     end
 
@@ -1796,12 +1840,6 @@ local function RefreshGroupState()
         if entry.active and not debugUnitOverrides[sender] and not GroupUnitForName(sender) then
             DeactivateIncomingRing(sender)
         end
-    end
-
-    if runtimeMode == "ringer" then
-        SendComm("Q")
-    else
-        SendComm("MODE:C")
     end
 
     UpdateControlButton()
@@ -2668,8 +2706,23 @@ driver:SetScript("OnUpdate", function()
     local bopActive = bopPresentation.active or (bopPresentation.pending and true or false)
     local vanishActive = vanishPresentation.active
 
-    if not testEnabled and not coordsEnabled and not incomingActive and not controlActive and not bopActive and not vanishActive then
+    if not testEnabled
+        and not coordsEnabled
+        and not incomingActive
+        and not controlActive
+        and not bopActive
+        and not vanishActive
+        and not groupAnnouncementPending
+    then
         return
+    end
+
+    if groupAnnouncementPending then
+        groupAnnouncementElapsed = groupAnnouncementElapsed + arg1
+
+        if groupAnnouncementElapsed >= GROUP_ANNOUNCE_DELAY then
+            AnnounceGroupState()
+        end
     end
 
     if bopActive then
@@ -2762,6 +2815,7 @@ events:SetScript("OnEvent", function()
         end
 
         RefreshGroupState()
+        ScheduleGroupAnnouncement()
     elseif event == "CHAT_MSG_ADDON" then
         if arg1 == COMM_PREFIX then
             ProcessCommMessage(arg4, arg2, false)
@@ -2783,6 +2837,7 @@ events:SetScript("OnEvent", function()
         HandleVanishSpellcastResult(false, arg1, arg2, arg3)
     elseif event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
         RefreshGroupState()
+        ScheduleGroupAnnouncement()
     end
 end)
 
