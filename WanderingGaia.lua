@@ -130,6 +130,7 @@ local controlTexture = nil
 local controlAnimationElapsed = 0
 local controlAnimationIndex = 1
 local lastRingSentAt = {}
+local groupChannel = nil
 local HandleControlClick
 
 local ApplyConfigFields
@@ -730,6 +731,22 @@ local function SendComm(message)
 
     SendAddonMessage(COMM_PREFIX, message, channel)
     return true
+end
+
+local function SendHello(recipient)
+    local mode = "C"
+
+    if runtimeMode == "ringer" then
+        mode = "R"
+    end
+
+    local message = "HELLO:" .. mode
+
+    if recipient and recipient ~= "" then
+        message = message .. ":" .. recipient
+    end
+
+    return SendComm(message)
 end
 
 local function EnsureVanishPresentation()
@@ -1408,6 +1425,42 @@ local function ProcessCommMessage(sender, message)
         return
     end
 
+    local _, _, helloMode, helloRecipient = string.find(message, "^HELLO:([CR]):?(.*)$")
+    if helloMode then
+        local addressed = helloRecipient and helloRecipient ~= ""
+
+        if addressed and helloRecipient ~= playerName then
+            return
+        end
+
+        if helloMode == "C" then
+            knownRingers[sender] = nil
+
+            if runtimeMode == "ringer" then
+                knownClients[sender] = true
+
+                if not addressed then
+                    SendHello(sender)
+                end
+            end
+        else
+            knownClients[sender] = nil
+            outgoingRings[sender] = nil
+
+            if runtimeMode == "client" then
+                knownRingers[sender] = true
+
+                if not addressed then
+                    SendHello(sender)
+                end
+            end
+        end
+
+        UpdateControlButton()
+        return
+    end
+
+    -- Receive-only compatibility with pre-HELLO builds.
     if message == "Q" then
         if runtimeMode == "client" then
             knownRingers[sender] = true
@@ -1558,14 +1611,8 @@ local function SetRuntimeMode(mode)
     end
 
     if runtimeMode == mode then
-        if mode == "ringer" then
-            SendComm("Q")
-            PrintMessage(L.MODE_RINGER)
-        else
-            SendComm("MODE:C")
-            PrintMessage(L.MODE_CLIENT)
-        end
-
+        SendHello()
+        PrintMessage(mode == "ringer" and L.MODE_RINGER or L.MODE_CLIENT)
         UpdateControlButton()
         return
     end
@@ -1592,15 +1639,8 @@ local function SetRuntimeMode(mode)
         StopBopPresentation()
     end
 
-    if mode == "ringer" then
-        SendComm("MODE:R")
-        SendComm("Q")
-        PrintMessage(L.MODE_RINGER)
-    else
-        SendComm("MODE:C")
-        PrintMessage(L.MODE_CLIENT)
-    end
-
+    SendHello()
+    PrintMessage(mode == "ringer" and L.MODE_RINGER or L.MODE_CLIENT)
     UpdateControlButton()
 end
 
@@ -1637,13 +1677,23 @@ local function RefreshGroupState()
         end
     end
 
-    if runtimeMode == "ringer" then
-        SendComm("Q")
-    else
-        SendComm("MODE:C")
-    end
-
     UpdateControlButton()
+end
+
+local function RefreshGroupMembership(forceHello)
+    RefreshGroupState()
+
+    local channel = CommChannel()
+
+    if channel ~= groupChannel then
+        groupChannel = channel
+
+        if channel then
+            SendHello()
+        end
+    elseif forceHello and channel then
+        SendHello()
+    end
 end
 
 local function CancelIncomingRingForTarget()
@@ -2456,7 +2506,7 @@ events:SetScript("OnEvent", function()
             RefreshConfigFields()
         end
 
-        RefreshGroupState()
+        RefreshGroupMembership(true)
     elseif event == "CHAT_MSG_ADDON" then
         if arg1 == COMM_PREFIX then
             ProcessCommMessage(arg4, arg2, false)
@@ -2477,7 +2527,7 @@ events:SetScript("OnEvent", function()
         HandleBopSpellcastResult(false, arg1, arg2, arg3)
         HandleVanishSpellcastResult(false, arg1, arg2, arg3)
     elseif event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
-        RefreshGroupState()
+        RefreshGroupMembership(false)
     end
 end)
 
