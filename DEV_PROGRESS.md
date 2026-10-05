@@ -4,13 +4,13 @@
 
 ## Current
 - Branch: `dev`
-- Version: `0.2.7-dev`.
-- Current runtime checkpoint: `c4230674623c509381f29912769468bdadb9062f` — tunes the Vanish/device-disconnect presentation to 75% size, moves it 300 px left/down from screen centre, and removes the dynamic title shadow.
-- Current `dev` head before this status-only handoff update: `06d93e03a046601054aefbc5430cca3e7c272802` — records the stable 0.2.7 release; runtime checkpoint remains `c4230674623c509381f29912769468bdadb9062f`.
+- Version: `0.2.8-dev`.
+- Current runtime checkpoint: `e8d9d0519bba91a2b429abeb322fab97e11dd7e8` — `0.2.8-dev` coalesces roster-triggered discovery announcements and throttles duplicate client replies.
+- Current `dev` head before this status-only handoff update: `e8d9d0519bba91a2b429abeb322fab97e11dd7e8`.
 - Stable runtime release: `0.2.7` at `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
 - Current `main` head: `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
-- Goal: eliminate the excessive WanderingGaia addon-message burst caused by raid/party roster update storms and discovery-query reply amplification, while preserving the established discovery result and all Ring Bell, remote-position, BoP/Cena and Vanish behavior.
-- Current scope boundary: change only discovery/mode announcement scheduling/deduplication needed to stop roster-event spam. Do not retune Ring Bell geometry, position refresh cadence, BoP/Cena, Vanish, UI, security model, or transport API.
+- Goal: replace roster-driven discovery with a one-time `HELLO` peer handshake so ordinary raid/party roster churn causes no WanderingGaia discovery traffic, while preserving Ring Bell, remote-position, BoP/Cena and Vanish behavior.
+- Current scope boundary: change only discovery/mode presence protocol and group-membership announcement scheduling. Keep PARTY/RAID `SendAddonMessage`, authoritative `arg4` sender identity, and every non-discovery protocol/feature unchanged.
 
 ## Current Design / Development Contract
 
@@ -41,10 +41,11 @@
 - Native 1.12.1 has no camera pitch/projection data for true vertical screen projection; Z affects radial distance only.
 
 ### Protocol / Data Model
-- Discovery/mode:
-  - `Q` — discovery query.
-  - `MODE:C` — client announcement.
-  - `MODE:R` — ringer announcement.
+- Discovery/mode, planned for the next dev revision:
+  - `HELLO:C` / `HELLO:R` — one broadcast presence announcement when the local addon loads while grouped, transitions into a PARTY/RAID channel, or changes mode.
+  - `HELLO:C:<recipient>` / `HELLO:R:<recipient>` — addressed reply carried over the same PARTY/RAID transport; only the named recipient consumes it.
+  - Opposite modes answer a broadcast hello once; addressed replies never generate another reply, preventing discovery loops.
+  - Ordinary same-channel roster changes only clean stale peer state and send no discovery packet.
 - Ring control:
   - `RING:1:<recipient>` — start/re-ring the named recipient.
   - `RING:0:<recipient>` — stop the named recipient.
@@ -110,6 +111,7 @@
 - `7d21ab0189db669cc8a294f7a400deed048fe397` — refine Ring Bell range and sender controls.
 
 ## Completed / User-Verified
+- `0.2.8-dev` discovery-spam mitigation received a partial runtime pass: user reports WanderingGaia message behavior is "much better" after the roster-event coalescing/throttle change. No exact before/after message count was recorded, so treat this as qualitative confirmation rather than a complete traffic gate.
 - Directional target geometry and the tuning values recorded above were user-tested in WoW 1.12.1.
 - Settings revision `2` one-time reset and subsequent persistence were user-verified.
 - Stable `0.1.8` at `889a4a5daf1807e7a104b3eae413d26aa3468249` was exercised in the real two-client gift use: cross-client discovery, PARTY/RAID addon-message transport, remote ring delivery, and recipient cancellation worked.
@@ -153,7 +155,7 @@
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- New reproduced communication issue: adding 8 bots to a raid produced about 50 WanderingGaia addon messages. Code review identifies immediate `RefreshGroupState()` broadcasts on every `RAID_ROSTER_UPDATE`/`PARTY_MEMBERS_CHANGED` plus `Q` -> raid-wide `MODE:C` replies as the burst/amplification path. Target fix is to coalesce roster refresh announcements and suppress redundant discovery replies without changing non-discovery protocol behavior.
+- Discovery traffic issue: adding 8 bots to a raid previously produced about 50 WanderingGaia messages. `0.2.8-dev` materially reduced the burst in runtime use, but the user requested the cleaner architectural fix: roster changes should not drive discovery at all; grouped WG peers should announce with `HELLO` and reply only to the announcing peer.
 - Stable 0.2.4 failed the real BoP gag in the earlier test. Dev 0.2.5-dev then succeeded on a real two-client BoP once with explicit sender `/wg ringer` and recipient `/wg client`, but the user subsequently reported another real BoP in combat did not trigger. The failure is therefore intermittent; combat may or may not be related and is not currently established as a cause. 0.2.5 diagnostics wrap the existing gates without intentionally changing BoP semantics.
 - Stable 0.2.3's target-token bug and non-persistent runtime mode were addressed in 0.2.4; mode persistence itself has not yet been separately reported by the user.
 - User explicitly accepted this 0.2.4 release validation debt because main 0.2.3 was already known-broken.
@@ -181,9 +183,10 @@
 3. Confirm a failed/interrupted Vanish does not produce the gag and that existing Ring Bell / BoP behavior remains unchanged.
 
 ## Planned / Next Work
-- Stable `0.2.7` is released on `main`; no further release action is pending.
-- When convenient, run the real two-client successful/failed Vanish transport/cast-gating test. Until then, keep that path recorded as accepted validation debt rather than inferred from the local debug presentation test.
-- Keep the current BoP/Cena path unchanged unless a reproducible failure is demonstrated.
+- Implement `0.2.9-dev` HELLO discovery on top of the user-improved `0.2.8-dev` baseline.
+- Remove the temporary roster debounce/client-announcement throttle once HELLO owns discovery.
+- Runtime gate: adding/removing non-WG raid bots should produce zero WG discovery packets after the local group channel is already established; a WG peer joining/reloading/changing mode should produce one broadcast hello plus at most one addressed reply from each opposite-mode WG peer.
+- Keep the current Ring Bell, POSQ/POS, BoP/Cena and Vanish paths byte-for-byte/protocol-equivalent outside discovery.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -208,4 +211,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Implement the targeted discovery-spam fix on `dev`: bump to `0.2.8-dev`, coalesce bursty roster-triggered discovery announcements, suppress redundant `Q` replies within the same discovery burst, preserve all other protocol messages unchanged, then perform static/Lua-compatibility checks available in this environment and record the exact untested runtime delta here.
+Bump to `0.2.9-dev`, replace `Q`/`MODE:C`/`MODE:R` emission with `HELLO:<mode>` + addressed `HELLO:<mode>:<recipient>` replies, track local PARTY/RAID channel transitions so same-channel roster churn only cleans stale state, remove the temporary `0.2.8-dev` discovery timer/throttle machinery, then run static compatibility checks and record the untested runtime delta.
