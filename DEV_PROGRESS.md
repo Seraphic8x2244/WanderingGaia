@@ -6,11 +6,11 @@
 - Branch: `dev`
 - Version: `0.2.7-dev`.
 - Current runtime checkpoint: `c4230674623c509381f29912769468bdadb9062f` — tunes the Vanish/device-disconnect presentation to 75% size, moves it 300 px left/down from screen centre, and removes the dynamic title shadow.
-- Current `dev` head before this status-only handoff update: `c4230674623c509381f29912769468bdadb9062f`; parent `d4ce8f45f1860f2acb554c25d3f914558c84f0be` documented the requested presentation tuning.
+- Current `dev` head before this status-only handoff update: `06d93e03a046601054aefbc5430cca3e7c272802` — records the stable 0.2.7 release; runtime checkpoint remains `c4230674623c509381f29912769468bdadb9062f`.
 - Stable runtime release: `0.2.7` at `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
 - Current `main` head: `39382408bc6e24ab0ea541eb2e2ce9a67ddde914`.
-- Goal: add a Rogue Vanish gag: when the ringer successfully casts Vanish, grouped/discovered clients show a fake Windows device-disconnect dialog using `artwork/device.tga`, overlay the authoritative remote sender name in the blank title bar, play `artwork/device.wav`, then auto-hide after about 3 seconds. Preserve the existing Ring Bell and BoP/Cena behavior.
-- Current scope boundary: implement and test only the Vanish gag plus its dev debug path. Do not retune proven geometry, alter BoP/Cena behavior without new evidence, or start options/minimap/framework/public multi-user security work.
+- Goal: eliminate the excessive WanderingGaia addon-message burst caused by raid/party roster update storms and discovery-query reply amplification, while preserving the established discovery result and all Ring Bell, remote-position, BoP/Cena and Vanish behavior.
+- Current scope boundary: change only discovery/mode announcement scheduling/deduplication needed to stop roster-event spam. Do not retune Ring Bell geometry, position refresh cadence, BoP/Cena, Vanish, UI, security model, or transport API.
 
 ## Current Design / Development Contract
 
@@ -153,6 +153,7 @@
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
+- New reproduced communication issue: adding 8 bots to a raid produced about 50 WanderingGaia addon messages. Code review identifies immediate `RefreshGroupState()` broadcasts on every `RAID_ROSTER_UPDATE`/`PARTY_MEMBERS_CHANGED` plus `Q` -> raid-wide `MODE:C` replies as the burst/amplification path. Target fix is to coalesce roster refresh announcements and suppress redundant discovery replies without changing non-discovery protocol behavior.
 - Stable 0.2.4 failed the real BoP gag in the earlier test. Dev 0.2.5-dev then succeeded on a real two-client BoP once with explicit sender `/wg ringer` and recipient `/wg client`, but the user subsequently reported another real BoP in combat did not trigger. The failure is therefore intermittent; combat may or may not be related and is not currently established as a cause. 0.2.5 diagnostics wrap the existing gates without intentionally changing BoP semantics.
 - Stable 0.2.3's target-token bug and non-persistent runtime mode were addressed in 0.2.4; mode persistence itself has not yet been separately reported by the user.
 - User explicitly accepted this 0.2.4 release validation debt because main 0.2.3 was already known-broken.
@@ -207,4 +208,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-No release work is pending. Use stable `0.2.7` normally; if the Vanish gag is tested with two real grouped clients, record successful/failed cast transport and receiver-gating results against stable commit `39382408...`. Otherwise continue with the next explicitly requested feature or fix.
+Implement the targeted discovery-spam fix on `dev`: bump to `0.2.8-dev`, coalesce bursty roster-triggered discovery announcements, suppress redundant `Q` replies within the same discovery burst, preserve all other protocol messages unchanged, then perform static/Lua-compatibility checks available in this environment and record the exact untested runtime delta here.
