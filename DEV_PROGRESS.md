@@ -116,6 +116,7 @@
 - `7d21ab0189db669cc8a294f7a400deed048fe397` — refine Ring Bell range and sender controls.
 
 ## Completed / User-Verified
+- `0.2.9-dev` HELLO discovery traffic gate passed for same-channel roster churn: with the addon already in RAID, adding the same 8 non-WanderingGaia bots produced zero WG discovery messages. This verifies that ordinary raid roster changes no longer emit discovery traffic.
 - `0.2.8-dev` discovery-spam mitigation received a partial runtime pass: user reports WanderingGaia message behavior is "much better" after the roster-event coalescing/throttle change. No exact before/after message count was recorded, so treat this as qualitative confirmation rather than a complete traffic gate.
 - Directional target geometry and the tuning values recorded above were user-tested in WoW 1.12.1.
 - Settings revision `2` one-time reset and subsequent persistence were user-verified.
@@ -162,7 +163,7 @@
 - Stable release prep stripped all integrated debug hooks/strings and dev docs, set TOC metadata to `WanderingGaia` / `0.1.10`, left 136 top-level local declarations, resolved all locale references, and passed the real verified Lua 5.0.2 compiler in Actions run `36033684250`. The exact checked stable Lua/TOC/locale blobs were then used in `main` release commit `76720d7c...`; no persistent workflow remains.
 
 ## Current Issues
-- Discovery traffic issue: adding 8 bots to a raid previously produced about 50 WanderingGaia messages. `0.2.8-dev` materially reduced the burst; `0.2.9-dev` now removes roster-driven announcement traffic entirely for same-channel roster churn. Runtime verification of the new zero-discovery-packet expectation is pending.
+- Discovery traffic issue: adding 8 bots to a raid previously produced about 50 WanderingGaia messages. `0.2.9-dev` now passes the same-channel roster-churn gate: adding the same 8 non-WG bots produced zero WG discovery messages. Peer HELLO/reply discovery still needs a focused two-WG-client runtime check.
 - Stable 0.2.4 failed the real BoP gag in the earlier test. Dev 0.2.5-dev then succeeded on a real two-client BoP once with explicit sender `/wg ringer` and recipient `/wg client`, but the user subsequently reported another real BoP in combat did not trigger. The failure is therefore intermittent; combat may or may not be related and is not currently established as a cause. 0.2.5 diagnostics wrap the existing gates without intentionally changing BoP semantics.
 - Stable 0.2.3's target-token bug and non-persistent runtime mode were addressed in 0.2.4; mode persistence itself has not yet been separately reported by the user.
 - User explicitly accepted this 0.2.4 release validation debt because main 0.2.3 was already known-broken.
@@ -185,10 +186,9 @@
 - Not tested: real two-client BoP successful/failed cast transport, ringer/client identity gating, and aura-caster verification.
 
 ### Next Runtime Test
-1. With one current WG user already in a raid, add/remove the same 8 non-WG bots and confirm no WG discovery messages are emitted after the local transport is already RAID.
-2. Join/reload a second `0.2.9-dev` WG user in the raid; confirm the joining/reloading user emits one unaddressed `HELLO:C` or `HELLO:R`, and each opposite-mode WG peer emits at most one addressed reply naming that user.
-3. Confirm ringer/client discovery still enables Ring Bell targeting and that Ring Bell, POSQ/POS, BoP/Cena and Vanish behavior remain unchanged.
-4. Change/reassert `/wg ringer` or `/wg client` while grouped and confirm one fresh HELLO handshake occurs without a repeating message loop.
+1. Join/reload a second `0.2.9-dev` WG user in the raid; confirm the joining/reloading user emits one unaddressed `HELLO:C` or `HELLO:R`, and each opposite-mode WG peer emits at most one addressed reply naming that user.
+2. Confirm ringer/client discovery still enables Ring Bell targeting and that Ring Bell, POSQ/POS, BoP/Cena and Vanish behavior remain unchanged.
+3. Change/reassert `/wg ringer` or `/wg client` while grouped and confirm one fresh HELLO handshake occurs without a repeating message loop.
 
 ## Planned / Next Work
 - Runtime-test `0.2.9-dev` HELLO discovery against the four checks above.
@@ -218,4 +218,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Install current `dev` at `0.2.9-dev` / `3fb7623...` and run the HELLO traffic gate: first add/remove the 8 non-WG raid bots and verify zero same-channel discovery traffic, then join/reload one opposite-mode WG peer and verify one broadcast HELLO plus addressed reply discovery with no loop.
+Run the remaining HELLO peer-discovery gate on `0.2.9-dev`: join/reload one opposite-mode WG peer and verify one broadcast HELLO plus one addressed reply with no loop, then confirm Ring Bell discovery still works.
