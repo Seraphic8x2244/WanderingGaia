@@ -191,9 +191,9 @@
 3. Change/reassert `/wg ringer` or `/wg client` while grouped and confirm one fresh HELLO handshake occurs without a repeating message loop.
 
 ## Planned / Next Work
-- Runtime-test `0.2.9-dev` HELLO discovery against the four checks above.
-- If the traffic/discovery gate passes, keep HELLO as the discovery owner and retire the old Q/MODE protocol from documentation; legacy receive compatibility can remain unless there is a concrete reason to remove it.
-- Do not promote to stable until explicitly requested.
+- User explicitly authorized promotion of the runtime-tested HELLO discovery slice to stable `main`.
+- Prepare stable `0.2.9` directly on the current `main` tree rather than merging divergent `dev`: apply only the HELLO discovery/runtime delta, preserve main-only README/presentation artwork, keep dev debug/docs out of stable, and leave Ring Bell/POSQ/POS/BoP/Cena/Vanish behavior unchanged.
+- Record remaining validation debt accurately: zero-spam same-channel roster churn is runtime-verified; two-WG-client HELLO reply/discovery remains untested unless completed before release.
 
 ## Deferred / Out of Scope
 - Geometry retuning unless the runtime test reveals a real regression.
@@ -218,4 +218,4 @@
 - External/runtime prerequisites for the next pass: two grouped WoW 1.12.1 clients with ClassicAPI; the ringer must be able to cast Blessing of Protection for the BoP path.
 
 ## Exact Next Step
-Run the remaining HELLO peer-discovery gate on `0.2.9-dev`: join/reload one opposite-mode WG peer and verify one broadcast HELLO plus one addressed reply with no loop, then confirm Ring Bell discovery still works.
+Promote stable `0.2.9` now from the current `main` tree: apply the HELLO discovery changes only, bump stable TOC metadata to `0.2.9`, perform available static review, move `main`, then update this document with the exact stable commit and remaining validation debt.
