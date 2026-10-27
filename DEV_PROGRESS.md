@@ -57,7 +57,8 @@
   - Ringer replies only when in ringer mode, the requester is grouped, the request names the local player, and that requester currently has an active outgoing ring.
   - Older clients safely ignore unknown `POSQ`/`POS` messages.
 - BoP:
-  - `BOP:<recipient>` — sent only after a matching successful local Blessing of Protection cast at a still-discovered grouped client.
+  - Name compatibility: vanilla 1.12.1 calls the ability **Blessing of Protection** and Turtle WoW 1.17.2+ calls it **Hand of Protection**. The existing addon does not compare spell names: both sender cast pairing and receiver aura verification use the same numeric rank IDs (`1022`, `5599`, `10278`). Accordingly, a display-name rename alone requires no runtime code change. Turtle-specific rank/aura IDs have **not** been verified in-game; use `/wg debug boptrace on` on both clients if the gag does not fire, and inspect the actual cast IDs, aura IDs, and verification gates before changing matching logic.
+  - `BOP:<recipient>` — sent only after a matching successful local Blessing/Hand of Protection cast at a still-discovered grouped client.
   - Supported spell IDs are `1022`, `5599`, and `10278`.
   - `UNIT_SPELLCAST_SENT` records target + castGUID + spellID; matching interrupted/failed/failed-quiet events clear the pending cast without sending; only matching `UNIT_SPELLCAST_SUCCEEDED` sends.
   - Receiver accepts only while in client mode, for the local player, from a currently known grouped ringer, then waits up to `1.5s` for a matching BoP aura whose ClassicAPI `sourceUnit` or `sourceGUID` resolves to the same sender.
